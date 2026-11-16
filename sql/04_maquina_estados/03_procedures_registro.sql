@@ -1,0 +1,7 @@
+-- =============================================================================
+-- Parte 1 — Questão 5 (3/4): Procedures de Registro e Remoção de Binding DTE
+-- Arquivo: sql/04_maquina_estados/03_procedures_registro.sql
+-- Objetos:
+--   - bd2_meta.registrar_binding(p_schema text, p_tabela text, p_coluna text, p_machine_id int)
+--   - bd2_meta.remover_binding(p_schema text, p_tabela text, p_coluna text)
+-- =============================================================================

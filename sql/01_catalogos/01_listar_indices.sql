@@ -1,0 +1,8 @@
+-- =============================================================================
+-- Parte 1 — Questão 1: Listagem de Índices via Catálogo
+-- Arquivo: sql/01_catalogos/01_listar_indices.sql
+-- Contrato:
+--   Consultar as tabelas de catálogo (pg_index, pg_class, pg_namespace,
+--   pg_attribute, pg_am) para listar todos os índices existentes acompanhados
+--   das tabelas e colunas indexadas pelo mesmo.
+-- =============================================================================

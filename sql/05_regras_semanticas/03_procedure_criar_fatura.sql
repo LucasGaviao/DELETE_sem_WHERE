@@ -1,0 +1,4 @@
+-- =============================================================================
+-- Parte 2 — Questão 3 (2/2): Stored Procedure R-SP-01 (criar_fatura_com_itens)
+-- Arquivo: sql/05_regras_semanticas/03_procedure_criar_fatura.sql
+-- =============================================================================

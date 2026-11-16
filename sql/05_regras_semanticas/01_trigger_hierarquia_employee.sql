@@ -1,0 +1,4 @@
+-- =============================================================================
+-- Parte 2 — Questão 2: Trigger Semântico R-TRG-01 (Hierarquia sem Ciclos)
+-- Arquivo: sql/05_regras_semanticas/01_trigger_hierarquia_employee.sql
+-- =============================================================================

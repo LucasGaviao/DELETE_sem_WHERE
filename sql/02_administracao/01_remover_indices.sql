@@ -1,0 +1,13 @@
+-- =============================================================================
+-- Parte 1 — Questão 2: Procedimento para Remoção de Índices de uma Tabela
+-- Arquivo: sql/02_administracao/01_remover_indices.sql
+-- Contrato:
+--   bd2_meta.remover_indices_tabela(
+--       p_schema text,
+--       p_tabela text,
+--       p_incluir_constraints bool DEFAULT false,
+--       p_cascade bool DEFAULT false
+--   )
+--   Atenção: filtrar pg_constraint com con.conrelid = i.indrelid AND
+--   con.contype IN ('p','u','x') para não atingir FKs externas.
+-- =============================================================================

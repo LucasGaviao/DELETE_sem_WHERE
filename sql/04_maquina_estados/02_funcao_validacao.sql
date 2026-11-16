@@ -1,0 +1,6 @@
+-- =============================================================================
+-- Parte 1 — Questão 5 (2/4): Função de Trigger Genérica de Validação do DTE
+-- Arquivo: sql/04_maquina_estados/02_funcao_validacao.sql
+-- Objeto:
+--   bd2_meta.fn_validar_transicao_estado() RETURNS trigger
+-- =============================================================================

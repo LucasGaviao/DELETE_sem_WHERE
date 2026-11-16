@@ -1,0 +1,11 @@
+-- =============================================================================
+-- Parte 1 — Questão 4: Geração Dinâmica de CREATE TABLE a partir do Catálogo
+-- Arquivo: sql/03_ddl_dinamico/01_gerar_create_table.sql
+-- Contrato:
+--   bd2_meta.gerar_ddl_tabelas(
+--       p_schema_origem text,
+--       p_schema_destino text,
+--       p_incluir_fks bool DEFAULT true
+--   ) RETURNS text
+--   Retorna texto DDL em 2 fases: (A) CREATE TABLE + PK; (B) ALTER TABLE ADD FK.
+-- =============================================================================

@@ -1,0 +1,5 @@
+-- =============================================================================
+-- Parte 2 — Questão 4: Trigger Semântico R-TRG-02 (Integridade de Invoice.Total)
+-- Arquivo: sql/05_regras_semanticas/02_integridade_invoice_total.sql
+-- Deve ser instalado antes de 03_procedure_criar_fatura.sql.
+-- =============================================================================

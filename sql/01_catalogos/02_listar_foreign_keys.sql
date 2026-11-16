@@ -1,0 +1,8 @@
+-- =============================================================================
+-- Parte 1 — Questão 3: Listagem de Chaves Estrangeiras via Catálogo
+-- Arquivo: sql/01_catalogos/02_listar_foreign_keys.sql
+-- Contrato:
+--   Consultar as tabelas de catálogo (pg_constraint contype = 'f', pg_class,
+--   pg_namespace, pg_attribute, unnest(conkey, confkey) WITH ORDINALITY) para
+--   listar todas as chaves estrangeiras informando tabelas e colunas envolvidas.
+-- =============================================================================

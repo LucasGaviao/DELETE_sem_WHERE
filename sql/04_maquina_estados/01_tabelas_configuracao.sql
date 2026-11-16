@@ -1,0 +1,9 @@
+-- =============================================================================
+-- Parte 1 — Questão 5 (1/4): Tabelas de Configuração do Motor DTE
+-- Arquivo: sql/04_maquina_estados/01_tabelas_configuracao.sql
+-- Objetos em bd2_meta:
+--   - state_machine
+--   - state_definition
+--   - state_transition
+--   - state_binding
+-- =============================================================================

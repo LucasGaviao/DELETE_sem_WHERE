@@ -1,0 +1,7 @@
+-- =============================================================================
+-- Parte 1 — Questão 5 (4/4): Cenário de Demonstração do Motor DTE
+-- Arquivo: sql/04_maquina_estados/04_demo.sql
+-- Cenários:
+--   1. Extensão public.invoice.status (PENDENTE -> PAGO | CANCELADO)
+--   2. Segunda tabela bd2_demo.pedido_demo.situacao (NOVO -> EM_ANDAMENTO -> CONCLUIDO)
+-- =============================================================================
