@@ -6,7 +6,7 @@
 --   Remove índices de uma tabela informada por parâmetro (schema + tabela).
 --   Diferencia índices independentes (DROP INDEX) de índices que sustentam
 --   constraints PK/UNIQUE/EXCLUDE (ALTER TABLE ... DROP CONSTRAINT).
---   Por padrão preserva constraints e nunca aplica CASCADE sem opt-in explícito.
+--   Por padrão preserva constraints e nunca aplica CASCADE sem pedido explícito.
 -- =============================================================================
 
 CREATE OR REPLACE PROCEDURE bd2_meta.remover_indices_tabela(
@@ -90,3 +90,8 @@ BEGIN
     END LOOP;
 END;
 $$;
+
+-- Procedimento administrativo e destrutivo: não fica disponível a PUBLIC.
+-- (Só o dono das tabelas consegue remover índices, mas o EXECUTE também é
+--  restrito para que usuários comuns não tenham acesso a ele.)
+REVOKE ALL ON PROCEDURE bd2_meta.remover_indices_tabela(text, text, boolean, boolean, jsonb) FROM PUBLIC;
