@@ -1,0 +1,629 @@
+\documentclass[11pt,a4paper]{article}
+
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage[brazilian]{babel}
+\usepackage{lmodern}
+\usepackage{microtype}
+\usepackage[a4paper,margin=2.5cm]{geometry}
+\usepackage{booktabs}
+\usepackage{tabularx}
+\usepackage{enumitem}
+\usepackage{caption}
+\usepackage{listings}
+\usepackage{tikz}
+\usetikzlibrary{automata,positioning,arrows.meta}
+\usepackage[hidelinks]{hyperref}
+
+% Números extraídos das evidências reais (gerado por gerar_relatorio.py)
+\input{numeros}
+
+\lstset{
+  language=SQL,
+  basicstyle=\ttfamily\small,
+  keywordstyle=\bfseries,
+  columns=fullflexible,
+  keepspaces=true,
+  upquote=true,
+  showstringspaces=false,
+  frame=lines,
+  xleftmargin=1em,
+  framexleftmargin=0.5em,
+  aboveskip=0.8em,
+  belowskip=0.8em,
+  morekeywords={PROCEDURE,RETURNS,LANGUAGE,DEFINER,LATERAL,ORDINALITY,RECURSIVE,CALL,TRIGGER,EXECUTE,FUNCTION,FOR,EACH,ROW,BEFORE,AFTER,INOUT,OWNER,GRANT,REVOKE}
+}
+
+\setlist{itemsep=0.2em,topsep=0.4em}
+% código em linha: permite quebra de linha após "_" e "." em identificadores longos
+\newcommand{\cod}[1]{{\ttfamily\renewcommand{\_}{\textunderscore\allowbreak}#1}}
+\emergencystretch=2em
+\newenvironment{enunciado}{\begin{quote}\small\itshape}{\end{quote}}
+
+\title{%
+  \normalsize Universidade Federal Fluminense --- Instituto de Computação\\
+  Banco de Dados II --- Prof.\ Rodrigo Salvador Monteiro\\[2.5em]
+  \LARGE Trabalho em Grupo --- Partes 1 e 2\\[0.4em]
+  \large Programação em banco de dados com PostgreSQL sobre o esquema Chinook}
+\author{\integrantes}
+\date{Niterói, \today}
+
+\begin{document}
+
+\maketitle
+\thispagestyle{empty}
+
+\begin{abstract}
+\noindent Este relatório descreve as soluções do grupo para as Partes~1 e~2 do trabalho, implementadas em
+PostgreSQL~16 com a linguagem procedural PL/pgSQL sobre o esquema exemplo Chinook. Para cada questão são
+apresentados o enunciado, a solução adotada e sua justificativa, e o resultado obtido na execução. O código-fonte
+completo, os testes automatizados e as saídas de execução acompanham este relatório no pacote de entrega; o texto
+cita apenas os trechos necessários para explicar cada solução.
+\end{abstract}
+
+\tableofcontents
+
+% =====================================================================
+\section{Introdução}
+
+\subsection{Ambiente}
+
+O SGBD utilizado é o PostgreSQL~16, escolha aprovada pelo professor. O esquema exemplo é o Chinook Database
+v1.4.5, na variante \cod{Chinook\_PostgreSql\_SerialPKs.sql}, que cria o banco \cod{chinook\_serial} com as onze
+tabelas no schema \cod{public} e nomes em minúsculas separados por sublinhado (\cod{invoice}, \cod{invoice\_line},
+\cod{unit\_price}, \dots). Essa variante foi escolhida porque suas chaves primárias têm valor padrão gerado por
+sequência, sincronizada com os dados originais; assim, faturas e itens podem ser inseridos sem informar o
+identificador, o que o procedimento da Parte~2 e os testes exigem.
+
+As rotinas genéricas da Parte~1 e a configuração do motor de estados ficam no schema auxiliar \cod{bd2\_meta},
+e os objetos de demonstração em \cod{bd2\_demo}. As regras da Parte~2, específicas do Chinook, ficam em
+\cod{public}, junto às tabelas que protegem. Duas extensões do esquema foram feitas exclusivamente para demonstrar a Questão~5 da Parte~1: a
+coluna \cod{invoice.status} e a tabela \cod{bd2\_demo.pedido\_demo}.
+
+\subsection{Organização da entrega e execução}
+
+\begin{table}[!htb]
+\centering\small
+\begin{tabularx}{\textwidth}{@{}lX@{}}
+\toprule
+Pasta / arquivo & Conteúdo \\
+\midrule
+\cod{sql/00\_ambiente/} & Script oficial do Chinook e verificação do ambiente \\
+\cod{sql/01\_catalogos/} & Parte~1, Questões~1 e~3 \\
+\cod{sql/02\_administracao/} & Parte~1, Questão~2 \\
+\cod{sql/03\_ddl\_dinamico/} & Parte~1, Questão~4 \\
+\cod{sql/04\_maquina\_estados/} & Parte~1, Questão~5 (motor genérico e cenário de demonstração) \\
+\cod{sql/05\_regras\_semanticas/} & Parte~2 (papéis, triggers e procedimento armazenado) \\
+\cod{sql/06\_testes/} & Testes automatizados, inclusive de concorrência \\
+\cod{sql/07\_evidencias/} & Geração das saídas de cada questão \\
+\cod{evidencias/} & Saídas da execução que embasa este relatório \\
+\cod{run\_all.sh}, \cod{run\_all.ps1} & Execução completa a partir de um banco limpo \\
+\bottomrule
+\end{tabularx}
+\caption{Organização do pacote de entrega.}
+\end{table}
+
+O script \cod{run\_all.sh} (ou \cod{run\_all.ps1}, no Windows) recria o banco a partir do script oficial do
+Chinook, instala os módulos na ordem de dependência, executa todos os testes e grava as saídas em
+\cod{evidencias/}. Os testes são executados pelo \cod{psql} com \cod{ON\_ERROR\_STOP}: qualquer divergência entre
+resultado esperado e obtido interrompe a execução. Eles não dependem de identificadores fixos dos dados
+originais, pois criam as próprias linhas e as removem ao final. O \cod{README.md} do pacote detalha os
+pré-requisitos e os comandos.
+
+\subsection{Princípios adotados}
+
+\begin{itemize}
+  \item \textbf{Generalidade.} As rotinas da Parte~1 recebem schema, tabela e coluna como parâmetros e obtêm tudo
+        do catálogo; nenhuma delas contém nomes de tabelas, colunas ou índices do Chinook.
+  \item \textbf{SQL dinâmico seguro.} Identificadores são montados com \cod{format('\%I', \dots)} e literais com
+        \cod{\%L}, nunca por concatenação, o que evita injeção de SQL e erros com nomes que exigem aspas.
+  \item \textbf{Verificação automática.} Cada questão possui casos de teste positivos e, onde a questão admite
+        rejeição, negativos.
+\end{itemize}
+
+% =====================================================================
+\section{Parte 1}
+
+\subsection{Questão 1 --- Índices pelo catálogo}
+
+\begin{enunciado}
+Consultar as tabelas de catálogo para listar todos os índices existentes acompanhados das tabelas e colunas
+indexadas pelo mesmo.
+\end{enunciado}
+
+A função \cod{bd2\_meta.listar\_indices(p\_schema, p\_incluir\_sistema)} consulta diretamente o catálogo do
+PostgreSQL. A tabela \cod{pg\_index} contém uma linha por índice, com a tabela indexada (\cod{indrelid}), as
+posições das colunas e os indicadores de unicidade, chave primária, exclusão e predicado parcial. Ela é combinada
+com \cod{pg\_class} (para o índice e para a tabela), \cod{pg\_namespace} (schema) e \cod{pg\_am} (método de
+acesso):
+
+\begin{lstlisting}
+FROM pg_index i
+JOIN pg_class     idx ON idx.oid = i.indexrelid
+JOIN pg_class     tbl ON tbl.oid = i.indrelid
+JOIN pg_namespace ns  ON ns.oid  = tbl.relnamespace
+JOIN pg_am        am  ON am.oid  = idx.relam
+\end{lstlisting}
+
+As colunas de cada posição do índice são obtidas com \cod{pg\_get\_indexdef(indexrelid, k, true)}, que devolve o
+nome da coluna ou, em índices sobre expressões, a própria expressão. As colunas-chave (posições
+\cod{1..indnkeyatts}) são separadas das colunas incluídas com \cod{INCLUDE}. Sem parâmetros, a função lista os
+índices de tabelas e visões materializadas de todos os schemas de usuário; com \cod{p\_incluir\_sistema = true},
+lista também os do catálogo do sistema e das tabelas TOAST. A visão \cod{bd2\_meta.vw\_indices} expõe o mesmo resultado.
+
+\paragraph{Resultado.} No schema \cod{public} do Chinook a função lista \numIndicesPublic{} índices, com tabela,
+colunas, método de acesso e tipo (chave primária ou comum). Os testes verificam a exclusão dos schemas de sistema
+e, num índice de teste composto, parcial e com \cod{INCLUDE}, a separação correta entre colunas-chave e incluídas
+(\cod{sql/06\_testes/01\_testes\_parte1\_q1\_a\_q4.sql}). A listagem completa está em
+\cod{evidencias/p1\_q1\_indices.txt}.
+
+\subsection{Questão 2 --- Procedimento que remove os índices de uma tabela}
+
+\begin{enunciado}
+Criar usando a linguagem de programação do SGBD escolhido um procedimento que remova todos os índices de uma
+tabela informada como parâmetro.
+\end{enunciado}
+
+O procedimento \cod{bd2\_meta.remover\_indices\_tabela(p\_schema, p\_tabela, p\_incluir\_constraints, p\_cascade)}
+localiza a tabela pelo catálogo e percorre todos os seus índices. No PostgreSQL há dois tipos de índice que
+exigem comandos diferentes. Os índices independentes, criados com \cod{CREATE INDEX}, são removidos com
+\cod{DROP INDEX}. Os que sustentam uma restrição \cod{PRIMARY KEY}, \cod{UNIQUE} ou \cod{EXCLUDE} não podem ser
+removidos dessa forma: é necessário remover a restrição com \cod{ALTER TABLE \dots{} DROP CONSTRAINT}.
+
+Para distinguir os casos, o procedimento associa cada índice a \cod{pg\_constraint} restringindo a tabela e o tipo
+da restrição:
+
+\begin{lstlisting}
+LEFT JOIN pg_constraint con
+       ON con.conindid = i.indexrelid
+      AND con.conrelid = i.indrelid
+      AND con.contype IN ('p', 'u', 'x')
+\end{lstlisting}
+
+O filtro por \cod{conrelid} é necessário porque as chaves estrangeiras de \emph{outras} tabelas também registram
+em \cod{conindid} o índice da chave primária que referenciam; sem ele, o procedimento confundiria essas restrições
+com as da própria tabela.
+
+A chamada que remove \textbf{todos} os índices da tabela, inclusive os que sustentam chave primária e
+\cod{UNIQUE}, é:
+
+\begin{lstlisting}
+CALL bd2_meta.remover_indices_tabela('schema', 'tabela',
+                                     p_incluir_constraints => true);
+\end{lstlisting}
+
+Por segurança, o valor padrão de \cod{p\_incluir\_constraints} é falso: sem ele, o procedimento remove apenas os
+índices independentes, pois remover uma chave primária altera as regras de integridade da tabela, e não apenas
+seu desempenho. Pelo mesmo motivo, \cod{CASCADE} nunca é aplicado implicitamente. Se outras tabelas possuem chave
+estrangeira para a chave primária, a remoção é recusada, a menos que se informe também \cod{p\_cascade => true},
+caso em que essas chaves estrangeiras são removidas junto.
+
+\paragraph{Resultado.} A demonstração (\cod{evidencias/p1\_q2\_remocao\_indices.txt}) é feita sobre tabelas reais
+do Chinook, dentro de transações desfeitas ao final. Em \cod{invoice\_line}, a chamada padrão remove os dois índices
+independentes e preserva a chave primária; com \cod{p\_incluir\_constraints} a tabela fica sem nenhum índice. Em
+\cod{employee}, cuja chave primária é referenciada por outras tabelas, a remoção sem \cod{p\_cascade} é recusada, e
+com \cod{p\_cascade} todos os índices e as chaves estrangeiras dependentes são removidos.
+
+\subsection{Questão 3 --- Chaves estrangeiras pelo catálogo}
+
+\begin{enunciado}
+Consultar as tabelas de catálogo para listar todas as chaves estrangeiras existentes informando as tabelas e
+colunas envolvidas.
+\end{enunciado}
+
+A função \cod{bd2\_meta.listar\_foreign\_keys(p\_schema)} lê \cod{pg\_constraint} com \cod{contype = 'f'}. Cada
+chave estrangeira guarda as colunas locais em \cod{conkey} e as referenciadas em \cod{confkey}, como vetores de
+números de coluna. Os dois vetores são percorridos em paralelo, o que pareia corretamente as colunas pela posição
+mesmo em chaves compostas, e os números são convertidos em nomes por meio de \cod{pg\_attribute}:
+
+\begin{lstlisting}
+CROSS JOIN LATERAL unnest(c.conkey, c.confkey) WITH ORDINALITY
+           AS u(attnum_local, attnum_ref, pos)
+JOIN pg_attribute att_local ON att_local.attrelid = c.conrelid
+                           AND att_local.attnum   = u.attnum_local
+\end{lstlisting}
+
+A função informa ainda as ações \cod{ON UPDATE} e \cod{ON DELETE}, o tipo de \cod{MATCH} e se a restrição é
+postergável; a visão \cod{bd2\_meta.vw\_foreign\_keys} lista as chaves de todos os schemas.
+
+\paragraph{Resultado.} São listadas as \numFKsPublic{} chaves estrangeiras do Chinook, entre elas a
+autorreferência \cod{employee.reports\_to} $\rightarrow$ \cod{employee.employee\_id}. Os testes verificam também o
+pareamento correto das colunas numa chave composta. A listagem completa está em
+\cod{evidencias/p1\_q3\_foreign\_keys.txt}.
+
+\subsection{Questão 4 --- Geração dinâmica de \texttt{CREATE TABLE}}
+
+\begin{enunciado}
+Criar usando a linguagem de programação do SGBD escolhido um script que construa de forma dinâmica a partir do
+catálogo os comandos create table das tabelas existentes no esquema exemplo considerando pelo menos as
+informações sobre colunas (nome, tipo e obrigatoriedade) e chaves primárias e estrangeiras.
+\end{enunciado}
+
+A função \cod{bd2\_meta.gerar\_ddl\_tabelas(p\_schema\_origem, p\_schema\_destino, p\_incluir\_fks)} devolve como
+texto o script de criação de todas as tabelas de um schema; ela não executa os comandos. O schema de destino é um
+parâmetro, de modo que o script pode recriar a estrutura em outro local. A geração ocorre em duas fases:
+
+\begin{enumerate}
+  \item \textbf{Tabelas e chaves primárias.} Para cada tabela, as colunas são lidas de \cod{pg\_attribute} na
+        ordem de definição: nome, tipo exato com tamanho e precisão, obtido com
+        \cod{format\_type(atttypid, atttypmod)}, e obrigatoriedade (\cod{attnotnull}). A chave primária vem de
+        \cod{pg\_constraint} e é declarada dentro do \cod{CREATE TABLE}.
+  \item \textbf{Chaves estrangeiras.} Depois de todas as tabelas, cada chave estrangeira é emitida como
+        \cod{ALTER TABLE \dots{} ADD CONSTRAINT \dots{} FOREIGN KEY}, com as colunas montadas a partir de
+        \cod{conkey} e \cod{confkey} e com as ações referenciais preservadas. Referências ao próprio schema de
+        origem são redirecionadas ao schema de destino.
+\end{enumerate}
+
+Gerar as chaves estrangeiras numa segunda fase, como faz o utilitário \cod{pg\_dump}, dispensa ordenar as tabelas
+por dependência e funciona também com autorreferências e ciclos entre tabelas. Um trecho do resultado:
+
+\begin{lstlisting}
+CREATE TABLE public.album (
+    album_id integer NOT NULL,
+    title character varying(160) NOT NULL,
+    artist_id integer NOT NULL,
+    CONSTRAINT album_pkey PRIMARY KEY (album_id)
+);
+...
+ALTER TABLE public.album ADD CONSTRAINT album_artist_id_fkey
+  FOREIGN KEY (artist_id) REFERENCES public.artist (artist_id);
+\end{lstlisting}
+
+\paragraph{Resultado.} O script completo gerado para o Chinook está em \cod{evidencias/p1\_q4\_ddl\_gerado.sql}.
+Como ele reflete o catálogo atual, inclui a coluna \cod{invoice.status} criada na Questão~5. Para comprovar que o
+texto gerado é válido, ele foi executado num schema novo, e a estrutura resultante coincide com a original:
+\numQquatroTabelas{} tabelas, \numQquatroPKs{} chaves primárias, \numQquatroFKs{} chaves estrangeiras,
+\numQquatroColunas{} colunas, das quais \numQquatroNotNull{} obrigatórias. O teste correspondente verifica ainda
+que a chave estrangeira copiada rejeita uma linha órfã.
+
+\subsection{Questão 5 --- Validação genérica de diagrama de transição de estados}
+
+\begin{enunciado}
+Implemente uma solução através da programação em banco de dados para validar os valores de uma coluna que
+represente uma situação (estado) garantindo que os seus valores e suas transições atendam a especificação de um
+diagrama de transição de estados (DTE). Quanto mais genérica e reutilizável for a solução melhor a pontuação
+nessa questão. Junto da solução deverá ser entregue um cenário de teste demonstrando o funcionamento da solução.
+\end{enunciado}
+
+\paragraph{Ideia central.} Em vez de um trigger específico para cada tabela, o grupo implementou um motor
+genérico em que \emph{o diagrama é dado, e não código}. Os estados e as transições de cada diagrama são
+cadastrados em tabelas de configuração, e uma única função de trigger valida qualquer coluna de estado de
+qualquer tabela consultando essa configuração. Colocar uma nova coluna sob controle de um diagrama exige apenas
+cadastrá-lo e chamar um procedimento; nenhum código é escrito ou alterado.
+
+\paragraph{Modelo.} O schema \cod{bd2\_meta} contém quatro tabelas:
+\begin{itemize}
+  \item \cod{state\_machine}: um diagrama e sua política de inserção. Com \cod{INITIAL\_ONLY}, uma linha nova
+        precisa nascer no estado inicial; com \cod{ANY\_VALID\_STATE}, pode nascer em qualquer estado válido,
+        o que é útil em cargas de dados;
+  \item \cod{state\_definition}: os estados, com indicação de inicial, terminal e ativo. Um índice único parcial
+        garante no máximo um estado inicial por diagrama;
+  \item \cod{state\_transition}: as transições permitidas. Um trigger impede cadastrar transição que parta de
+        estado terminal;
+  \item \cod{state\_binding}: o vínculo entre um diagrama e uma coluna (schema, tabela e coluna).
+\end{itemize}
+
+\paragraph{Validação.} O PostgreSQL não possui trigger global; por isso a \emph{função} é única e a
+\emph{instalação} é feita por tabela. A função \cod{bd2\_meta.fn\_validar\_transicao\_estado()} identifica em
+tempo de execução o que está validando: a tabela vem das variáveis \cod{TG\_TABLE\_SCHEMA} e \cod{TG\_TABLE\_NAME},
+a coluna vem do argumento do trigger e o valor é lido de forma genérica com \cod{to\_jsonb(NEW) -{}>{}> coluna}.
+As regras são:
+\begin{itemize}
+  \item \textbf{inserção:} o estado não pode ser nulo, deve existir e estar ativo; com \cod{INITIAL\_ONLY}, deve
+        ser o estado inicial;
+  \item \textbf{atualização:} se o estado não mudou, a operação é aceita; caso contrário, o estado atual e o novo
+        devem estar ativos, o estado atual não pode ser terminal e a transição (atual, novo) deve estar cadastrada;
+  \item \textbf{falha segura:} se o vínculo ou o diagrama estiverem inativos, a operação é rejeitada em vez de
+        prosseguir sem validação.
+\end{itemize}
+
+O procedimento \cod{bd2\_meta.registrar\_binding} verifica no catálogo a tabela, a coluna e o tipo, confere se os
+dados já existentes estão em estados válidos e instala o trigger. Ela é idempotente: chamá-la novamente para a
+mesma coluna atualiza o vínculo sem duplicá-lo. O procedimento \cod{remover\_binding} desfaz a instalação. O uso
+completo para uma coluna nova resume-se a:
+
+\begin{lstlisting}
+INSERT INTO bd2_meta.state_machine (machine_name, insert_policy)
+     VALUES ('INVOICE_STATE', 'INITIAL_ONLY');
+-- INSERTs em state_definition e state_transition (estados e arestas)
+CALL bd2_meta.registrar_binding('public', 'invoice', 'status',
+                                'INVOICE_STATE');
+\end{lstlisting}
+
+\paragraph{Cenário de demonstração.} Para comprovar a generalidade, a mesma função, sem nenhuma alteração, é
+aplicada a duas tabelas, com colunas de nomes diferentes e diagramas diferentes
+(Figura~\ref{fig:dte}): \cod{public.invoice.status}, com política \cod{INITIAL\_ONLY}, e
+\cod{bd2\_demo.pedido\_demo.situacao}, com política \cod{ANY\_VALID\_STATE}.
+
+\begin{figure}[!htb]
+\centering\small
+\begin{tikzpicture}[->,>={Stealth},
+                    every state/.style={rectangle,rounded corners,minimum height=2.2em,minimum width=6.5em,draw}]
+  \node[state,initial,initial text={}] (P) at (0,0) {PENDENTE};
+  \node[state,accepting] (G) at (5,0.7)  {PAGO};
+  \node[state,accepting] (C) at (5,-0.7) {CANCELADO};
+  \path (P.east) edge (G.west) (P.east) edge (C.west);
+\end{tikzpicture}\\[0.4em]
+(a) \texttt{INVOICE\_STATE}, em \texttt{public.invoice.status}\\[1.6em]
+\begin{tikzpicture}[->,>={Stealth},
+                    every state/.style={rectangle,rounded corners,minimum height=2.2em,minimum width=5.5em,draw}]
+  \node[state,initial,initial text={}] (N) at (0,0) {NOVO};
+  \node[state] (E) at (3.6,0) {EM\_ANDAMENTO};
+  \node[state,accepting] (F) at (7.4,0) {CONCLUIDO};
+  \node[state,accepting] (X) at (3.6,-1.6) {CANCELADO};
+  \path (N) edge (E) (E) edge (F) (N) edge (X) (E) edge (X);
+\end{tikzpicture}\\[0.4em]
+(b) \texttt{PEDIDO\_STATE}, em \texttt{bd2\_demo.pedido\_demo.situacao}
+\caption{Diagramas da demonstração. A seta de entrada indica o estado inicial; a borda dupla, os estados
+terminais.}
+\label{fig:dte}
+\end{figure}
+
+\paragraph{Cenário de teste.} O cenário (\cod{sql/06\_testes/02\_testes\_maquina\_estados.sql}) executa
+\numCasosDTE{} casos, todos com o resultado esperado. Cada caso registra a operação, o resultado esperado e o
+obtido e, nas rejeições, o código de erro. A Tabela~\ref{tab:dte} resume os grupos; a lista completa está em
+\cod{evidencias/p1\_q5\_cenario\_teste.txt}.
+
+\begin{table}[!htb]
+\centering\small
+\begin{tabularx}{\textwidth}{@{}lXr@{}}
+\toprule
+Grupo & O que verifica & Casos \\
+\midrule
+A & Faturas: nascimento no estado inicial, transições permitidas e proibidas, saída de estado terminal,
+    estado inexistente, atualização de outras colunas & \numDTEa \\
+B & Pedidos (outra tabela, outra coluna, outra política): estado nulo, estado de outro diagrama, salto de etapa,
+    atualização de várias linhas desfeita por completo quando uma transição é inválida & \numDTEb \\
+C & Estado desativado; vínculo ou diagrama inativo (falha segura) & \numDTEc \\
+D & Registro e remoção de vínculos: idempotência, tabela, coluna ou tipo inválidos, recusa de dados existentes
+    fora do diagrama & \numDTEd \\
+E & Integridade do próprio diagrama: transição a partir de estado terminal, dois estados iniciais, estado
+    inexistente & \numDTEe \\
+F & Generalidade: as duas tabelas usam a mesma função, cujo código não contém nomes de tabela, coluna ou estado
+    & \numDTEf \\
+\bottomrule
+\end{tabularx}
+\caption{Grupos de casos do cenário de teste da Questão~5.}
+\label{tab:dte}
+\end{table}
+
+% =====================================================================
+\section{Parte 2}
+
+\subsection{Questão 1 --- Regras semânticas}
+
+\begin{enunciado}
+Criar regras semânticas, que são regras que não podem ser garantidas pela estrutura do modelo relacional, usando
+o esquema exemplo fornecido. As regras criadas também devem ser descritas textualmente no trabalho a ser
+entregue.
+\end{enunciado}
+
+O grupo definiu três regras. Nenhuma pode ser expressa pelos recursos declarativos do modelo relacional (chave
+primária, chave estrangeira, \cod{NOT NULL}, \cod{UNIQUE}, \cod{CHECK}), porque todas dependem de outras linhas
+ou de outras tabelas, enquanto uma restrição \cod{CHECK} examina apenas a própria linha.
+
+\paragraph{R-TRG-01 --- Hierarquia de funcionários sem ciclos.} Na tabela \cod{employee}, a coluna
+\cod{reports\_to} indica o superior de cada funcionário. A hierarquia formada deve ser acíclica: nenhum
+funcionário pode ser, direta ou indiretamente, superior de si mesmo. A chave estrangeira garante apenas que o
+superior existe, e uma restrição \cod{CHECK} impediria somente a autorreferência direta; detectar um ciclo
+indireto, como $A \rightarrow B \rightarrow C \rightarrow A$, exige percorrer outras linhas da tabela.
+
+\paragraph{R-SP-01 --- Fatura nasce com pelo menos um item.} Toda fatura criada pelo usuário da aplicação deve
+conter, já no momento da criação, pelo menos um item com faixa existente e quantidade inteira positiva, cobrado
+pelo preço oficial da faixa. A chave estrangeira está do lado dos itens (\cod{invoice\_line} $\rightarrow$
+\cod{invoice}): impede item sem fatura, mas não fatura sem itens. Uma cardinalidade mínima de um no lado
+``muitos'' não é expressável declarativamente.
+
+\paragraph{R-TRG-02 --- Total da fatura igual à soma dos itens.} Para toda fatura, \cod{invoice.total} deve ser
+igual à soma de \cod{unit\_price} $\times$ \cod{quantity} dos seus itens, ou zero se ela não tiver itens. É a regra
+proposta na Questão~4. Restrições \cod{CHECK} e colunas geradas não podem consultar outra tabela nem agregar
+linhas.
+
+As regras R-TRG-01 e R-TRG-02 são garantidas por triggers e a regra R-SP-01 por procedimento armazenado, atendendo ao
+mínimo de um caso de cada tipo.
+
+\subsection{Questão 2 --- Validação por trigger}
+
+\begin{enunciado}
+Implementar triggers que garantam a validação das regras semânticas criadas.
+\end{enunciado}
+
+A regra R-TRG-01 é garantida pelo trigger \cod{trg\_employee\_sem\_ciclo}, executado antes de cada inserção e de
+cada alteração de \cod{reports\_to} (ou do próprio identificador do funcionário). A função aceita a operação se o funcionário passa a não ter superior ou se a
+hierarquia não mudou e rejeita a autorreferência. Nos demais casos, percorre a cadeia de superiores a partir do
+novo superior com uma consulta recursiva e rejeita a operação se encontrar o próprio funcionário:
+
+\begin{lstlisting}
+WITH RECURSIVE cadeia AS (
+    SELECT e.employee_id, e.reports_to, ARRAY[e.employee_id] AS caminho
+      FROM public.employee e
+     WHERE e.employee_id = NEW.reports_to
+    UNION ALL
+    SELECT e.employee_id, e.reports_to, c.caminho || e.employee_id
+      FROM public.employee e JOIN cadeia c ON e.employee_id = c.reports_to
+     WHERE e.employee_id <> ALL (c.caminho)
+)
+SELECT array_agg(employee_id),
+       bool_or(employee_id = NEW.employee_id OR reports_to = NEW.employee_id)
+  INTO v_cadeia, v_ciclo
+  FROM cadeia;
+\end{lstlisting}
+
+A segunda condição (algum elo \emph{se reporta} ao funcionário) detecta também ciclos formados por várias linhas
+inseridas ou alteradas num mesmo comando.
+
+\paragraph{Concorrência.} Duas transações simultâneas, uma tornando $A$ subordinado a $B$ e outra $B$ subordinado
+a $A$, poderiam cada uma verificar a hierarquia antiga, não encontrar ciclo e confirmar. Para evitar isso, a
+função obtém um bloqueio consultivo de transação (\cod{pg\_advisory\_xact\_lock}) antes da verificação, o que
+serializa as alterações de hierarquia. No nível de isolamento padrão (\cod{READ COMMITTED}), a consulta seguinte
+ao bloqueio enxerga a alteração já confirmada pela outra transação. Nos níveis \cod{REPEATABLE READ} e
+\cod{SERIALIZABLE}, em que a fotografia dos dados é fixa, a função também bloqueia a cadeia lida com
+\cod{FOR SHARE}; se um desses superiores foi alterado por outra transação, o PostgreSQL aborta a transação com
+erro de serialização, que a aplicação deve repetir.
+
+A regra R-TRG-02, também garantida por triggers, é descrita na Questão~4.
+
+\paragraph{Resultado.} Os \numCasosH{} casos de teste (\cod{evidencias/p2\_testes\_regras.txt}) incluem autorreferência, ciclos de duas e de três pessoas,
+ciclos criados por uma única instrução de várias linhas, alterações válidas e uma tentativa de ciclo na hierarquia
+original do Chinook. Os testes de concorrência C3 e C4 (Seção~\ref{sec:conc}) mostram, nos dois níveis de
+isolamento, a segunda sessão sendo rejeitada e a hierarquia final sem ciclo.
+
+\subsection{Questão 3 --- Validação por procedimento armazenado e permissões}
+
+\begin{enunciado}
+Implementar procedimentos armazenados (stored procedures) que garantam a validação das regras semânticas criadas.
+Nesse caso, o mecanismo de permissões deve ser utilizado para criar um usuário que somente tenha acesso à
+manipulação dos dados envolvidos através do procedimento definido.
+\end{enunciado}
+
+\paragraph{Procedimento.} A regra R-SP-01 é garantida pelo procedimento \cod{public.criar\_fatura\_com\_itens}, que
+recebe o cliente e a lista de itens em JSON e devolve o número da fatura criada:
+
+\begin{lstlisting}
+CALL public.criar_fatura_com_itens(1,
+     '[{"track_id": 1, "quantity": 2}, {"track_id": 5, "quantity": 1}]');
+\end{lstlisting}
+
+Antes de gravar qualquer dado, o procedimento exige uma lista não vazia e valida todos os itens (identificador da
+faixa e quantidade inteiros, quantidade positiva, faixa existente). Em seguida grava o cabeçalho, com os dados de
+cobrança copiados do cadastro do cliente, e os itens, com o preço oficial da faixa e não um preço informado pelo
+chamador. Por fim confere que todos os itens foram gravados. Não há confirmação parcial: qualquer erro desfaz o
+cabeçalho e os itens. O total é calculado pelos triggers da regra R-TRG-02.
+
+\paragraph{Usuário restrito.} Foram criados dois papéis (Tabela~\ref{tab:papeis}). O procedimento é declarado
+\cod{SECURITY DEFINER} e pertence a \cod{bd2\_owner}: quando \cod{bd2\_app} o executa, ele opera com os
+privilégios de \cod{bd2\_owner}, e não com os de quem o chamou. Assim, o usuário da aplicação consegue criar
+faturas somente pelo caminho que valida a regra. Seguindo a recomendação da documentação do PostgreSQL para
+funções \cod{SECURITY DEFINER}, o caminho de busca de objetos é fixado
+(\cod{search\_path = pg\_catalog, public, pg\_temp}) e todos os objetos são qualificados pelo schema, o que
+impede o chamador de substituí-los por objetos próprios. O direito de execução é retirado de \cod{PUBLIC} e
+concedido apenas a \cod{bd2\_app}.
+
+\begin{table}[!htb]
+\centering\small
+\begin{tabularx}{\textwidth}{@{}llX@{}}
+\toprule
+Papel & Atributos & Privilégios \\
+\midrule
+\cod{bd2\_app} & com login & Execução do procedimento. Nenhum privilégio de leitura ou escrita sobre
+\cod{invoice}, \cod{invoice\_line} ou qualquer outra tabela do Chinook. \\
+\cod{bd2\_owner} & sem login & Dono do procedimento. Leitura de \cod{customer} e \cod{track}; leitura e inserção
+em \cod{invoice} e \cod{invoice\_line}; atualização apenas de \cod{invoice.total} (usada pela regra
+R-TRG-02); uso das sequências das chaves primárias. Não pode excluir dados. \\
+\bottomrule
+\end{tabularx}
+\caption{Papéis criados para a regra R-SP-01.}
+\label{tab:papeis}
+\end{table}
+
+O usuário \cod{bd2\_app} recebe uma senha de demonstração (\cod{bd2\_app}), o que permite conectar-se de fato
+como esse usuário.
+
+\paragraph{Resultado.} Os \numCasosS{} testes executados como \cod{bd2\_app} (\cod{evidencias/p2\_testes\_regras.txt})
+confirmam que o procedimento cria a fatura com os
+itens e o total corretos e rejeita lista vazia ou malformada, cliente ou faixa inexistentes e quantidades iguais a zero,
+negativas ou fracionárias, sem deixar nenhuma fatura parcial gravada. Inserção, alteração, exclusão,
+\cod{TRUNCATE} e mesmo leitura diretos nas tabelas de faturas são negados por falta de permissão. Outros \numCasosP{} casos
+conferem no catálogo os atributos dos papéis e do procedimento (\cod{evidencias/p2\_permissoes.txt} mostra os
+privilégios efetivos). No teste L1 (Seção~\ref{sec:conc}), uma conexão
+real como \cod{bd2\_app}, autenticada por senha, cria uma fatura pelo procedimento e tem a inserção e a leitura
+diretas negadas; uma senha errada é recusada.
+
+\subsection{Questão 4 --- Integridade de \texttt{Invoice.Total}}
+
+\begin{enunciado}
+A base original do Chinook possui uma coluna Total na tabela Invoice representada de forma redundante com as
+informações contidas nas colunas UnitPrice e Quantity na tabela InvoiceLine. Podemos identificar nesse caso uma
+regra semântica onde o valor Total de um Invoice deve ser igual à soma de UnitPrice * Quantity de todos os
+registros de InvoiceLine relacionados a um Invoice. Implementar uma solução que garanta a integridade dessa
+regra.
+\end{enunciado}
+
+A solução faz com que o total passe a ser mantido exclusivamente pelo banco. Antes de ativar a regra, o script
+confere que os dados originais a respeitam; no Chinook~1.4.5 não há divergências. A regra é garantida por três
+triggers:
+
+\begin{table}[!htb]
+\centering\small
+\begin{tabularx}{\textwidth}{@{}lp{4.6cm}X@{}}
+\toprule
+Trigger & Quando dispara & O que faz \\
+\midrule
+A & antes de inserir uma fatura ou alterar seu total (ou seu identificador) & Substitui o valor informado pela soma calculada dos
+itens. Um total digitado manualmente é corrigido. \\
+B & após inserir, excluir ou alterar fatura, preço ou quantidade de um item & Recalcula a fatura do item e, se o
+item mudou de fatura, também a anterior, sempre em ordem crescente de identificador para evitar impasse entre
+transações. \\
+C & após \cod{TRUNCATE} dos itens & Zera o total de todas as faturas, já que esse comando não dispara triggers
+por linha. \\
+\bottomrule
+\end{tabularx}
+\caption{Triggers da regra R-TRG-02.}
+\end{table}
+
+Com isso ficam cobertos a inclusão e a exclusão de itens, a alteração de preço, quantidade ou fatura de um item,
+a inclusão de fatura, a alteração direta do total, o esvaziamento da tabela de itens e a instrução
+\cod{INSERT \dots{} ON CONFLICT DO UPDATE}.
+
+\paragraph{Resultado.} Os \numCasosT{} casos de teste (\cod{evidencias/p2\_testes\_regras.txt}) conferem o total após cada um desses eventos, inclusive a
+transferência de um item entre duas faturas (ambas recalculadas) e a inserção de cinquenta itens numa única
+instrução. Ao final, uma auditoria sobre todas as faturas não encontra nenhuma divergência.
+
+\subsection{Testes de concorrência}
+\label{sec:conc}
+
+Um teste executado numa única sessão não demonstra o comportamento concorrente. Por isso o script
+\cod{sql/06\_testes/04\_concorrencia.sh} abre conexões \cod{psql} reais em paralelo
+(\cod{evidencias/p2\_concorrencia.txt}):
+
+\begin{itemize}
+  \item \textbf{C1:} \numSessoes{} sessões inserem itens na mesma fatura ao mesmo tempo; o total final é igual à
+        soma, sem erros;
+  \item \textbf{C2:} \numSessoes{} sessões transferem itens entre duas faturas em sentidos opostos; não ocorre
+        impasse e os dois totais terminam corretos;
+  \item \textbf{C3 e C4:} duas sessões tentam fechar um ciclo na hierarquia, em \cod{READ COMMITTED} e em
+        \cod{REPEATABLE READ}; nos dois casos a segunda é rejeitada e a hierarquia final não tem ciclo;
+  \item \textbf{C5:} \numSessoes{} sessões, todas com o papel \cod{bd2\_app} (\cod{SET ROLE}), executam o procedimento
+        simultaneamente e todas as faturas são criadas corretamente;
+  \item \textbf{L1:} conexão real como \cod{bd2\_app}, descrita na Questão~3.
+\end{itemize}
+
+% =====================================================================
+\section{Limitações e decisões de projeto}
+
+\begin{itemize}
+  \item \textbf{Remoção de índices.} A remoção de índices que sustentam restrições e o uso de \cod{CASCADE} são
+        opcionais e precisam ser pedidos explicitamente, para evitar a perda acidental de regras de integridade.
+  \item \textbf{Escopo do gerador de DDL.} O gerador cobre o exigido: colunas com nome, tipo e obrigatoriedade,
+        chaves primárias e estrangeiras. Não gera valores padrão (como as sequências da variante utilizada),
+        restrições \cod{UNIQUE} e \cod{CHECK}, índices nem comentários. Por isso, um esquema em que uma chave
+        estrangeira referencie uma restrição \cod{UNIQUE}, e não a chave primária, não seria reproduzido; isso não
+        ocorre no Chinook.
+  \item \textbf{Tipos de coluna de estado.} O motor aceita colunas de texto, enumeração e inteiras. Colunas
+        \cod{char(n)} são recusadas, porque o preenchimento com espaços prejudica a comparação dos estados. Os vínculos são
+        guardados por nome: se a tabela ou a coluna vinculada for renomeada, o motor passa a rejeitar as operações
+        nessa tabela (falha segura) até que o vínculo seja refeito.
+  \item \textbf{Exclusão de linhas.} Excluir uma linha não é uma transição de estado e não é validado pelo motor.
+        Num diagrama com política \cod{ANY\_VALID\_STATE}, excluir e reinserir equivale a recriar a linha em outro
+        estado; quando isso não for desejado, deve-se usar \cod{INITIAL\_ONLY} ou retirar o direito de exclusão.
+  \item \textbf{Total corrigido, e não rejeitado.} Na regra R-TRG-02, um total informado manualmente é substituído
+        pelo valor calculado em vez de provocar erro, o que mantém o total sempre correto sem exigir que as
+        aplicações o calculem.
+  \item \textbf{Alcance das regras.} A regra R-SP-01 vale para o usuário da aplicação, cujo único caminho de
+        escrita é o procedimento; usuários administrativos, com acesso direto às tabelas, não passam por ele.
+        Superusuários e donos das tabelas podem ainda desabilitar triggers.
+  \item \textbf{Senha de demonstração.} Por se tratar de um trabalho acadêmico, a senha de \cod{bd2\_app} é fixa
+        e pode ser alterada pela variável \cod{BD2\_APP\_PASSWORD}; em produção, ela não ficaria no código.
+\end{itemize}
+
+% =====================================================================
+\section{Conclusão}
+
+Todas as questões das duas partes foram implementadas em PL/pgSQL sobre o Chinook. As rotinas de catálogo e o
+motor de estados da Parte~1 são genéricos e não dependem do esquema exemplo; o motor, em particular, permite
+controlar qualquer coluna de estado apenas com dados de configuração. Na Parte~2, as três regras semânticas foram
+garantidas por triggers e por um procedimento armazenado combinado a permissões, considerando inclusive o acesso
+concorrente. A execução completa, a partir de um banco limpo, aplica todos os scripts e confirma o comportamento
+descrito por meio de testes automatizados, cujas saídas acompanham a entrega.
+
+\end{document}
