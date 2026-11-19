@@ -167,54 +167,77 @@ psql:sql/06_testes/01_testes_parte1_q1_a_q4.sql:205: NOTICE:  OK: Testes Q4 pass
 DO
 ------------------------------------------------------------------
 Executando: sql/06_testes/02_testes_maquina_estados.sql
-psql:sql/06_testes/02_testes_maquina_estados.sql:234: NOTICE:  [OK] A01 | invoice: INSERT sem informar status (DEFAULT PENDENTE = inicial) | esperado: ACEITO | obtido: ACEITO 
-psql:sql/06_testes/02_testes_maquina_estados.sql:234: NOTICE:  [OK] A02 | invoice: INSERT com status PAGO (não inicial, política INITIAL_ONLY) | esperado: REJEITADO | obtido: REJEITADO  — DTE [public.invoice.status / máquina INVOICE_STATE]: uma nova linha deve nascer no estado inicial; "PAGO" não é inicial.
-psql:sql/06_testes/02_testes_maquina_estados.sql:234: NOTICE:  [OK] A03 | invoice: INSERT com status inexistente ESTORNADO | esperado: REJEITADO | obtido: REJEITADO  — DTE [public.invoice.status / máquina INVOICE_STATE]: estado "ESTORNADO" não existe.
-psql:sql/06_testes/02_testes_maquina_estados.sql:234: NOTICE:  [OK] A04 | invoice: PENDENTE -> PAGO | esperado: ACEITO | obtido: ACEITO 
-psql:sql/06_testes/02_testes_maquina_estados.sql:234: NOTICE:  [OK] A05 | invoice: PAGO -> PENDENTE (PAGO é terminal) | esperado: REJEITADO | obtido: REJEITADO  — DTE [public.invoice.status / máquina INVOICE_STATE]: "PAGO" é estado terminal; nenhuma transição é permitida (tentativa: "PAGO" -> "PENDENTE").
-psql:sql/06_testes/02_testes_maquina_estados.sql:234: NOTICE:  [OK] A06 | invoice: UPDATE de outra coluna (billing_city) numa fatura PAGO | esperado: ACEITO | obtido: ACEITO 
-psql:sql/06_testes/02_testes_maquina_estados.sql:234: NOTICE:  [OK] A07 | invoice: UPDATE status PAGO -> PAGO (sem mudança de estado) | esperado: ACEITO | obtido: ACEITO 
-psql:sql/06_testes/02_testes_maquina_estados.sql:234: NOTICE:  [OK] A08 | invoice: INSERT de segunda fatura (PENDENTE) | esperado: ACEITO | obtido: ACEITO 
-psql:sql/06_testes/02_testes_maquina_estados.sql:234: NOTICE:  [OK] A09 | invoice: PENDENTE -> CANCELADO | esperado: ACEITO | obtido: ACEITO 
-psql:sql/06_testes/02_testes_maquina_estados.sql:234: NOTICE:  [OK] A10 | invoice: CANCELADO -> PAGO (CANCELADO é terminal) | esperado: REJEITADO | obtido: REJEITADO  — DTE [public.invoice.status / máquina INVOICE_STATE]: "CANCELADO" é estado terminal; nenhuma transição é permitida (tentativa: "CANCELADO" -> "PAGO").
-psql:sql/06_testes/02_testes_maquina_estados.sql:234: NOTICE:  [OK] A11 | invoice: status em minúsculas ('pago') — códigos são exatos | esperado: REJEITADO | obtido: REJEITADO  — DTE [public.invoice.status / máquina INVOICE_STATE]: estado "pago" não existe.
-psql:sql/06_testes/02_testes_maquina_estados.sql:234: NOTICE:  [OK] B01 | pedido: INSERT sem informar situacao (DEFAULT NOVO) | esperado: ACEITO | obtido: ACEITO 
-psql:sql/06_testes/02_testes_maquina_estados.sql:234: NOTICE:  [OK] B02 | pedido: INSERT direto em CONCLUIDO (política ANY_VALID_STATE permite) | esperado: ACEITO | obtido: ACEITO 
-psql:sql/06_testes/02_testes_maquina_estados.sql:234: NOTICE:  [OK] B03 | pedido: INSERT com situacao NULL (coluna anulável; rejeitado pelo motor) | esperado: REJEITADO | obtido: REJEITADO  — DTE [bd2_demo.pedido_demo.situacao / máquina PEDIDO_STATE]: o estado não pode ser nulo.
-psql:sql/06_testes/02_testes_maquina_estados.sql:234: NOTICE:  [OK] B04 | pedido: INSERT com PAGO (estado de OUTRA máquina) | esperado: REJEITADO | obtido: REJEITADO  — DTE [bd2_demo.pedido_demo.situacao / máquina PEDIDO_STATE]: estado "PAGO" não existe.
-psql:sql/06_testes/02_testes_maquina_estados.sql:234: NOTICE:  [OK] B05 | pedido: NOVO -> CONCLUIDO (pula EM_ANDAMENTO; sem aresta) | esperado: REJEITADO | obtido: REJEITADO  — DTE [bd2_demo.pedido_demo.situacao / máquina PEDIDO_STATE]: transição "NOVO" -> "CONCLUIDO" não é permitida pelo diagrama.
-psql:sql/06_testes/02_testes_maquina_estados.sql:234: NOTICE:  [OK] B06 | pedido: NOVO -> EM_ANDAMENTO | esperado: ACEITO | obtido: ACEITO 
-psql:sql/06_testes/02_testes_maquina_estados.sql:234: NOTICE:  [OK] B07 | pedido: EM_ANDAMENTO -> NULL | esperado: REJEITADO | obtido: REJEITADO  — DTE [bd2_demo.pedido_demo.situacao / máquina PEDIDO_STATE]: o estado não pode ser nulo.
-psql:sql/06_testes/02_testes_maquina_estados.sql:234: NOTICE:  [OK] B08 | pedido: EM_ANDAMENTO -> CONCLUIDO | esperado: ACEITO | obtido: ACEITO 
-psql:sql/06_testes/02_testes_maquina_estados.sql:234: NOTICE:  [OK] B09 | pedido: INSERT de terceiro pedido (NOVO) | esperado: ACEITO | obtido: ACEITO 
-psql:sql/06_testes/02_testes_maquina_estados.sql:234: NOTICE:  [OK] B10 | pedido: UPDATE em lote -> EM_ANDAMENTO (uma linha NOVO válida + uma CONCLUIDO inválida) | esperado: REJEITADO | obtido: REJEITADO  — DTE [bd2_demo.pedido_demo.situacao / máquina PEDIDO_STATE]: "CONCLUIDO" é estado terminal; nenhuma transição é permitida (tentativa: "CONCLUIDO" -> "EM_ANDAMENTO").
-psql:sql/06_testes/02_testes_maquina_estados.sql:234: NOTICE:  [OK] B11 | pedido: após B10, a linha válida continua NOVO (atomicidade do comando)
-psql:sql/06_testes/02_testes_maquina_estados.sql:234: NOTICE:  [OK] C01 | pedido: NOVO -> EM_ANDAMENTO com o estado EM_ANDAMENTO desativado | esperado: REJEITADO | obtido: REJEITADO  — DTE [bd2_demo.pedido_demo.situacao / máquina PEDIDO_STATE]: estado "EM_ANDAMENTO" está inativo.
-psql:sql/06_testes/02_testes_maquina_estados.sql:234: NOTICE:  [OK] C02 | pedido: INSERT com binding INATIVO (trigger ainda instalado) — falha segura | esperado: REJEITADO | obtido: REJEITADO  — DTE [bd2_demo.pedido_demo.situacao]: não há binding ativo (ou a máquina está inativa) para esta coluna; operação rejeitada (falha segura).
-psql:sql/06_testes/02_testes_maquina_estados.sql:234: NOTICE:  [OK] C03 | pedido: INSERT com a MÁQUINA inativa — falha segura | esperado: REJEITADO | obtido: REJEITADO  — DTE [bd2_demo.pedido_demo.situacao]: não há binding ativo (ou a máquina está inativa) para esta coluna; operação rejeitada (falha segura).
-psql:sql/06_testes/02_testes_maquina_estados.sql:234: NOTICE:  [OK] C04 | pedido: INSERT após reativar binding e máquina | esperado: ACEITO | obtido: ACEITO 
-psql:sql/06_testes/02_testes_maquina_estados.sql:234: NOTICE:  Binding registrado: bd2_demo.pedido_demo.situacao -> máquina "PEDIDO_STATE" (trigger zz_fsm_ee13082de46496b8a53361a1).
-psql:sql/06_testes/02_testes_maquina_estados.sql:234: NOTICE:  [OK] D01 | registrar_binding de novo na MESMA coluna (idempotência: não duplica binding nem trigger) | esperado: ACEITO | obtido: ACEITO 
-psql:sql/06_testes/02_testes_maquina_estados.sql:234: NOTICE:  [OK] D02 | após D01: exatamente 1 binding e 1 trigger zz_fsm_ em pedido_demo
-psql:sql/06_testes/02_testes_maquina_estados.sql:234: NOTICE:  [OK] D03 | registrar_binding em tabela inexistente | esperado: REJEITADO | obtido: REJEITADO  — registrar_binding: tabela bd2_demo.nao_existe não encontrada.
-psql:sql/06_testes/02_testes_maquina_estados.sql:234: NOTICE:  [OK] D04 | registrar_binding em coluna inexistente | esperado: REJEITADO | obtido: REJEITADO  — registrar_binding: coluna "nao_existe" não existe em bd2_demo.pedido_demo.
-psql:sql/06_testes/02_testes_maquina_estados.sql:234: NOTICE:  [OK] D05 | registrar_binding em coluna de tipo não suportado (timestamp) | esperado: REJEITADO | obtido: REJEITADO  — registrar_binding: tipo "timestamp without time zone" da coluna public.invoice.invoice_date não é suportado (use text, varchar, enum ou inteiro).
-psql:sql/06_testes/02_testes_maquina_estados.sql:234: NOTICE:  [OK] D06 | registrar_binding com máquina inexistente | esperado: REJEITADO | obtido: REJEITADO  — registrar_binding: máquina "NAO_EXISTE" não existe.
-psql:sql/06_testes/02_testes_maquina_estados.sql:234: NOTICE:  Binding removido: bd2_demo.pedido_demo.situacao (trigger zz_fsm_ee13082de46496b8a53361a1 excluído, binding desativado).
-psql:sql/06_testes/02_testes_maquina_estados.sql:234: NOTICE:  [OK] D07 | remover_binding de pedido_demo.situacao | esperado: ACEITO | obtido: ACEITO 
-psql:sql/06_testes/02_testes_maquina_estados.sql:234: NOTICE:  [OK] D08 | após D07: trigger removido e binding desativado (sem trigger órfão)
-psql:sql/06_testes/02_testes_maquina_estados.sql:234: NOTICE:  [OK] D09 | pedido: sem binding, valor fora do DTE (QUALQUER) não é validado | esperado: ACEITO | obtido: ACEITO 
-psql:sql/06_testes/02_testes_maquina_estados.sql:234: NOTICE:  [OK] D10 | registrar_binding com dados existentes inválidos (linha QUALQUER) | esperado: REJEITADO | obtido: REJEITADO  — registrar_binding: 1 linha(s) de bd2_demo.pedido_demo possuem "situacao" nulo ou fora dos estados ativos da máquina "PEDIDO_STATE".
-psql:sql/06_testes/02_testes_maquina_estados.sql:234: NOTICE:  trigger "zz_fsm_ee13082de46496b8a53361a1" for relation "bd2_demo.pedido_demo" does not exist, skipping
-psql:sql/06_testes/02_testes_maquina_estados.sql:234: NOTICE:  Binding registrado: bd2_demo.pedido_demo.situacao -> máquina "PEDIDO_STATE" (trigger zz_fsm_ee13082de46496b8a53361a1).
-psql:sql/06_testes/02_testes_maquina_estados.sql:234: NOTICE:  [OK] D11 | registrar_binding após corrigir os dados | esperado: ACEITO | obtido: ACEITO 
-psql:sql/06_testes/02_testes_maquina_estados.sql:234: NOTICE:  [OK] D12 | pedido: após re-registro, NOVO -> CONCLUIDO volta a ser rejeitado | esperado: REJEITADO | obtido: REJEITADO  — DTE [bd2_demo.pedido_demo.situacao / máquina PEDIDO_STATE]: transição "NOVO" -> "CONCLUIDO" não é permitida pelo diagrama.
-psql:sql/06_testes/02_testes_maquina_estados.sql:234: NOTICE:  [OK] E01 | config: transição saindo de estado terminal (CONCLUIDO -> NOVO) | esperado: REJEITADO | obtido: REJEITADO  — DTE inválido: o estado terminal "CONCLUIDO" não pode ter transição de saída (-> "NOVO").
-psql:sql/06_testes/02_testes_maquina_estados.sql:234: NOTICE:  [OK] E02 | config: marcar como terminal um estado com saídas (EM_ANDAMENTO) | esperado: REJEITADO | obtido: REJEITADO  — DTE inválido: o estado "EM_ANDAMENTO" possui transições de saída e não pode ser marcado como terminal.
-psql:sql/06_testes/02_testes_maquina_estados.sql:234: NOTICE:  [OK] E03 | config: segundo estado inicial na mesma máquina | esperado: REJEITADO | obtido: REJEITADO  — duplicate key value violates unique constraint "state_definition_um_inicial_uidx"
-psql:sql/06_testes/02_testes_maquina_estados.sql:234: NOTICE:  [OK] E04 | config: transição para estado não cadastrado | esperado: REJEITADO | obtido: REJEITADO  — insert or update on table "state_transition" violates foreign key constraint "state_transition_machine_id_to_state_fkey"
-psql:sql/06_testes/02_testes_maquina_estados.sql:234: NOTICE:  [OK] F01 | os triggers das 2 tabelas usam a MESMA função (mesmo OID)
-psql:sql/06_testes/02_testes_maquina_estados.sql:234: NOTICE:  [OK] F02 | o código da função não contém nomes de tabela, coluna ou estado da demo
+psql:sql/06_testes/02_testes_maquina_estados.sql:289: NOTICE:  [OK] A01 | invoice: INSERT sem informar status (DEFAULT PENDENTE = inicial) | esperado: ACEITO | obtido: ACEITO 
+psql:sql/06_testes/02_testes_maquina_estados.sql:289: NOTICE:  [OK] A02 | invoice: INSERT com status PAGO (não inicial, política INITIAL_ONLY) | esperado: REJEITADO | obtido: REJEITADO  — DTE [public.invoice.status / máquina INVOICE_STATE]: uma nova linha deve nascer no estado inicial; "PAGO" não é inicial.
+psql:sql/06_testes/02_testes_maquina_estados.sql:289: NOTICE:  [OK] A03 | invoice: INSERT com status inexistente ESTORNADO | esperado: REJEITADO | obtido: REJEITADO  — DTE [public.invoice.status / máquina INVOICE_STATE]: estado "ESTORNADO" não existe.
+psql:sql/06_testes/02_testes_maquina_estados.sql:289: NOTICE:  [OK] A04 | invoice: PENDENTE -> PAGO | esperado: ACEITO | obtido: ACEITO 
+psql:sql/06_testes/02_testes_maquina_estados.sql:289: NOTICE:  [OK] A05 | invoice: PAGO -> PENDENTE (PAGO é terminal) | esperado: REJEITADO | obtido: REJEITADO  — DTE [public.invoice.status / máquina INVOICE_STATE]: "PAGO" é estado terminal; nenhuma transição é permitida (tentativa: "PAGO" -> "PENDENTE").
+psql:sql/06_testes/02_testes_maquina_estados.sql:289: NOTICE:  [OK] A06 | invoice: UPDATE de outra coluna (billing_city) numa fatura PAGO | esperado: ACEITO | obtido: ACEITO 
+psql:sql/06_testes/02_testes_maquina_estados.sql:289: NOTICE:  [OK] A07 | invoice: UPDATE status PAGO -> PAGO (sem mudança de estado) | esperado: ACEITO | obtido: ACEITO 
+psql:sql/06_testes/02_testes_maquina_estados.sql:289: NOTICE:  [OK] A08 | invoice: INSERT de segunda fatura (PENDENTE) | esperado: ACEITO | obtido: ACEITO 
+psql:sql/06_testes/02_testes_maquina_estados.sql:289: NOTICE:  [OK] A09 | invoice: PENDENTE -> CANCELADO | esperado: ACEITO | obtido: ACEITO 
+psql:sql/06_testes/02_testes_maquina_estados.sql:289: NOTICE:  [OK] A10 | invoice: CANCELADO -> PAGO (CANCELADO é terminal) | esperado: REJEITADO | obtido: REJEITADO  — DTE [public.invoice.status / máquina INVOICE_STATE]: "CANCELADO" é estado terminal; nenhuma transição é permitida (tentativa: "CANCELADO" -> "PAGO").
+psql:sql/06_testes/02_testes_maquina_estados.sql:289: NOTICE:  [OK] A11 | invoice: status em minúsculas ('pago') — códigos são exatos | esperado: REJEITADO | obtido: REJEITADO  — DTE [public.invoice.status / máquina INVOICE_STATE]: estado "pago" não existe.
+psql:sql/06_testes/02_testes_maquina_estados.sql:289: NOTICE:  [OK] B01 | pedido: INSERT sem informar situacao (DEFAULT NOVO) | esperado: ACEITO | obtido: ACEITO 
+psql:sql/06_testes/02_testes_maquina_estados.sql:289: NOTICE:  [OK] B02 | pedido: INSERT direto em CONCLUIDO (política ANY_VALID_STATE permite) | esperado: ACEITO | obtido: ACEITO 
+psql:sql/06_testes/02_testes_maquina_estados.sql:289: NOTICE:  [OK] B03 | pedido: INSERT com situacao NULL (coluna anulável; rejeitado pelo motor) | esperado: REJEITADO | obtido: REJEITADO  — DTE [bd2_demo.pedido_demo.situacao / máquina PEDIDO_STATE]: o estado não pode ser nulo.
+psql:sql/06_testes/02_testes_maquina_estados.sql:289: NOTICE:  [OK] B04 | pedido: INSERT com PAGO (estado de OUTRA máquina) | esperado: REJEITADO | obtido: REJEITADO  — DTE [bd2_demo.pedido_demo.situacao / máquina PEDIDO_STATE]: estado "PAGO" não existe.
+psql:sql/06_testes/02_testes_maquina_estados.sql:289: NOTICE:  [OK] B05 | pedido: NOVO -> CONCLUIDO (pula EM_ANDAMENTO; sem aresta) | esperado: REJEITADO | obtido: REJEITADO  — DTE [bd2_demo.pedido_demo.situacao / máquina PEDIDO_STATE]: transição "NOVO" -> "CONCLUIDO" não é permitida pelo diagrama.
+psql:sql/06_testes/02_testes_maquina_estados.sql:289: NOTICE:  [OK] B06 | pedido: NOVO -> EM_ANDAMENTO | esperado: ACEITO | obtido: ACEITO 
+psql:sql/06_testes/02_testes_maquina_estados.sql:289: NOTICE:  [OK] B07 | pedido: EM_ANDAMENTO -> NULL | esperado: REJEITADO | obtido: REJEITADO  — DTE [bd2_demo.pedido_demo.situacao / máquina PEDIDO_STATE]: o estado não pode ser nulo.
+psql:sql/06_testes/02_testes_maquina_estados.sql:289: NOTICE:  [OK] B08 | pedido: EM_ANDAMENTO -> CONCLUIDO | esperado: ACEITO | obtido: ACEITO 
+psql:sql/06_testes/02_testes_maquina_estados.sql:289: NOTICE:  [OK] B09 | pedido: INSERT de terceiro pedido (NOVO) | esperado: ACEITO | obtido: ACEITO 
+psql:sql/06_testes/02_testes_maquina_estados.sql:289: NOTICE:  [OK] B10 | pedido: UPDATE em lote -> EM_ANDAMENTO (uma linha NOVO válida + uma CONCLUIDO inválida) | esperado: REJEITADO | obtido: REJEITADO  — DTE [bd2_demo.pedido_demo.situacao / máquina PEDIDO_STATE]: "CONCLUIDO" é estado terminal; nenhuma transição é permitida (tentativa: "CONCLUIDO" -> "EM_ANDAMENTO").
+psql:sql/06_testes/02_testes_maquina_estados.sql:289: NOTICE:  [OK] B11 | pedido: após B10, a linha válida continua NOVO (atomicidade do comando)
+psql:sql/06_testes/02_testes_maquina_estados.sql:289: NOTICE:  [OK] C01 | pedido: NOVO -> EM_ANDAMENTO com o estado EM_ANDAMENTO desativado | esperado: REJEITADO | obtido: REJEITADO  — DTE [bd2_demo.pedido_demo.situacao / máquina PEDIDO_STATE]: estado "EM_ANDAMENTO" está inativo.
+psql:sql/06_testes/02_testes_maquina_estados.sql:289: NOTICE:  [OK] C02 | pedido: INSERT com binding INATIVO (trigger ainda instalado) — falha segura | esperado: REJEITADO | obtido: REJEITADO  — DTE [bd2_demo.pedido_demo.situacao]: não há binding ativo (ou a máquina está inativa) para esta coluna; operação rejeitada (falha segura).
+psql:sql/06_testes/02_testes_maquina_estados.sql:289: NOTICE:  [OK] C03 | pedido: INSERT com a MÁQUINA inativa — falha segura | esperado: REJEITADO | obtido: REJEITADO  — DTE [bd2_demo.pedido_demo.situacao]: não há binding ativo (ou a máquina está inativa) para esta coluna; operação rejeitada (falha segura).
+psql:sql/06_testes/02_testes_maquina_estados.sql:289: NOTICE:  [OK] C04 | pedido: INSERT após reativar binding e máquina | esperado: ACEITO | obtido: ACEITO 
+psql:sql/06_testes/02_testes_maquina_estados.sql:289: NOTICE:  Binding registrado: bd2_demo.pedido_demo.situacao -> máquina "PEDIDO_STATE" (trigger zz_fsm_ee13082de46496b8a53361a1).
+psql:sql/06_testes/02_testes_maquina_estados.sql:289: NOTICE:  [OK] D01 | registrar_binding de novo na MESMA coluna (idempotência: não duplica binding nem trigger) | esperado: ACEITO | obtido: ACEITO 
+psql:sql/06_testes/02_testes_maquina_estados.sql:289: NOTICE:  [OK] D02 | após D01: exatamente 1 binding e 1 trigger zz_fsm_ em pedido_demo
+psql:sql/06_testes/02_testes_maquina_estados.sql:289: NOTICE:  [OK] D03 | registrar_binding em tabela inexistente | esperado: REJEITADO | obtido: REJEITADO  — registrar_binding: tabela bd2_demo.nao_existe não encontrada.
+psql:sql/06_testes/02_testes_maquina_estados.sql:289: NOTICE:  [OK] D04 | registrar_binding em coluna inexistente | esperado: REJEITADO | obtido: REJEITADO  — registrar_binding: coluna "nao_existe" não existe em bd2_demo.pedido_demo.
+psql:sql/06_testes/02_testes_maquina_estados.sql:289: NOTICE:  [OK] D05 | registrar_binding em coluna de tipo não suportado (timestamp) | esperado: REJEITADO | obtido: REJEITADO  — registrar_binding: tipo "timestamp without time zone" da coluna public.invoice.invoice_date não é suportado (use text, varchar, enum ou inteiro).
+psql:sql/06_testes/02_testes_maquina_estados.sql:289: NOTICE:  [OK] D06 | registrar_binding com máquina inexistente | esperado: REJEITADO | obtido: REJEITADO  — registrar_binding: máquina "NAO_EXISTE" não existe.
+psql:sql/06_testes/02_testes_maquina_estados.sql:289: NOTICE:  Binding removido: bd2_demo.pedido_demo.situacao (trigger zz_fsm_ee13082de46496b8a53361a1 excluído, binding desativado).
+psql:sql/06_testes/02_testes_maquina_estados.sql:289: NOTICE:  [OK] D07 | remover_binding de pedido_demo.situacao | esperado: ACEITO | obtido: ACEITO 
+psql:sql/06_testes/02_testes_maquina_estados.sql:289: NOTICE:  [OK] D08 | após D07: trigger removido e binding desativado (sem trigger órfão)
+psql:sql/06_testes/02_testes_maquina_estados.sql:289: NOTICE:  [OK] D09 | pedido: sem binding, valor fora do DTE (QUALQUER) não é validado | esperado: ACEITO | obtido: ACEITO 
+psql:sql/06_testes/02_testes_maquina_estados.sql:289: NOTICE:  [OK] D10 | registrar_binding com dados existentes inválidos (linha QUALQUER) | esperado: REJEITADO | obtido: REJEITADO  — registrar_binding: 1 linha(s) de bd2_demo.pedido_demo possuem "situacao" nulo ou fora dos estados ativos da máquina "PEDIDO_STATE".
+psql:sql/06_testes/02_testes_maquina_estados.sql:289: NOTICE:  trigger "zz_fsm_ee13082de46496b8a53361a1" for relation "bd2_demo.pedido_demo" does not exist, skipping
+psql:sql/06_testes/02_testes_maquina_estados.sql:289: NOTICE:  Binding registrado: bd2_demo.pedido_demo.situacao -> máquina "PEDIDO_STATE" (trigger zz_fsm_ee13082de46496b8a53361a1).
+psql:sql/06_testes/02_testes_maquina_estados.sql:289: NOTICE:  [OK] D11 | registrar_binding após corrigir os dados | esperado: ACEITO | obtido: ACEITO 
+psql:sql/06_testes/02_testes_maquina_estados.sql:289: NOTICE:  [OK] D12 | pedido: após re-registro, NOVO -> CONCLUIDO volta a ser rejeitado | esperado: REJEITADO | obtido: REJEITADO  — DTE [bd2_demo.pedido_demo.situacao / máquina PEDIDO_STATE]: transição "NOVO" -> "CONCLUIDO" não é permitida pelo diagrama.
+psql:sql/06_testes/02_testes_maquina_estados.sql:289: NOTICE:  trigger "zz_fsm_01538e31ef1d32c4b0ee634e" for relation "bd2_demo.teste_coluna_t" does not exist, skipping
+psql:sql/06_testes/02_testes_maquina_estados.sql:289: NOTICE:  Binding registrado: bd2_demo.teste_coluna_t.situacao -> máquina "PEDIDO_STATE" (trigger zz_fsm_01538e31ef1d32c4b0ee634e).
+psql:sql/06_testes/02_testes_maquina_estados.sql:289: NOTICE:  [OK] D13 | registrar_binding em tabela com dados válidos e uma coluna chamada t | esperado: ACEITO | obtido: ACEITO 
+psql:sql/06_testes/02_testes_maquina_estados.sql:289: NOTICE:  Binding removido: bd2_demo.teste_coluna_t.situacao (trigger zz_fsm_01538e31ef1d32c4b0ee634e excluído, binding desativado).
+psql:sql/06_testes/02_testes_maquina_estados.sql:289: NOTICE:  trigger "zz_fsm_f9a73482b198fcdcfea2b0cc" for relation "bd2_demo.teste_renomear" does not exist, skipping
+psql:sql/06_testes/02_testes_maquina_estados.sql:289: NOTICE:  Binding registrado: bd2_demo.teste_renomear.situacao -> máquina "PEDIDO_STATE" (trigger zz_fsm_f9a73482b198fcdcfea2b0cc).
+psql:sql/06_testes/02_testes_maquina_estados.sql:289: NOTICE:  [OK] D14 | renomear: INSERT depois de renomear a COLUNA vinculada (falha segura) | esperado: REJEITADO | obtido: REJEITADO  — DTE [bd2_demo.teste_renomear.situacao]: a coluna não existe na tabela (renomeada?); operação rejeitada.
+psql:sql/06_testes/02_testes_maquina_estados.sql:289: NOTICE:  Binding removido: bd2_demo.teste_renomear.situacao (trigger zz_fsm_f9a73482b198fcdcfea2b0cc excluído, binding desativado).
+psql:sql/06_testes/02_testes_maquina_estados.sql:289: NOTICE:  [OK] D15 | renomear: remover_binding com o nome ANTIGO da coluna | esperado: ACEITO | obtido: ACEITO 
+psql:sql/06_testes/02_testes_maquina_estados.sql:289: NOTICE:  [OK] D16 | renomear: após D15, nenhum trigger do motor sobra na tabela
+psql:sql/06_testes/02_testes_maquina_estados.sql:289: NOTICE:  trigger "zz_fsm_e5ba52216e3a3cab167e9b77" for relation "bd2_demo.teste_renomear" does not exist, skipping
+psql:sql/06_testes/02_testes_maquina_estados.sql:289: NOTICE:  Binding registrado: bd2_demo.teste_renomear.fase -> máquina "PEDIDO_STATE" (trigger zz_fsm_e5ba52216e3a3cab167e9b77).
+psql:sql/06_testes/02_testes_maquina_estados.sql:289: NOTICE:  [OK] D17 | renomear: registrar_binding com o nome NOVO da coluna | esperado: ACEITO | obtido: ACEITO 
+psql:sql/06_testes/02_testes_maquina_estados.sql:289: NOTICE:  [OK] D18 | renomear: INSERT depois de renomear a TABELA vinculada (falha segura) | esperado: REJEITADO | obtido: REJEITADO  — DTE [bd2_demo.teste_renomeada.fase]: não há binding ativo (ou a máquina está inativa) para esta coluna; operação rejeitada (falha segura).
+psql:sql/06_testes/02_testes_maquina_estados.sql:289: NOTICE:  Binding removido: bd2_demo.teste_renomear.fase (trigger zz_fsm_e5ba52216e3a3cab167e9b77 excluído, binding desativado).
+psql:sql/06_testes/02_testes_maquina_estados.sql:289: NOTICE:  [OK] D19 | renomear: remover_binding com o nome ANTIGO da tabela | esperado: ACEITO | obtido: ACEITO 
+psql:sql/06_testes/02_testes_maquina_estados.sql:289: NOTICE:  trigger "zz_fsm_2af9d7f02e96eba269fa3d78" for relation "bd2_demo.teste_renomeada" does not exist, skipping
+psql:sql/06_testes/02_testes_maquina_estados.sql:289: NOTICE:  Binding registrado: bd2_demo.teste_renomeada.fase -> máquina "PEDIDO_STATE" (trigger zz_fsm_2af9d7f02e96eba269fa3d78).
+psql:sql/06_testes/02_testes_maquina_estados.sql:289: NOTICE:  [OK] D20 | renomear: registrar_binding com o nome NOVO da tabela | esperado: ACEITO | obtido: ACEITO 
+psql:sql/06_testes/02_testes_maquina_estados.sql:289: NOTICE:  [OK] D21 | renomear: exatamente 1 trigger do motor na tabela (sem trigger duplicado)
+psql:sql/06_testes/02_testes_maquina_estados.sql:289: NOTICE:  [OK] D22 | renomear: após refazer o vínculo, INSERT em NOVO é aceito | esperado: ACEITO | obtido: ACEITO 
+psql:sql/06_testes/02_testes_maquina_estados.sql:289: NOTICE:  [OK] D23 | renomear: e a transição NOVO -> CONCLUIDO continua rejeitada | esperado: REJEITADO | obtido: REJEITADO  — DTE [bd2_demo.teste_renomeada.fase / máquina PEDIDO_STATE]: transição "NOVO" -> "CONCLUIDO" não é permitida pelo diagrama.
+psql:sql/06_testes/02_testes_maquina_estados.sql:289: NOTICE:  Binding removido: bd2_demo.teste_renomeada.fase (trigger zz_fsm_2af9d7f02e96eba269fa3d78 excluído, binding desativado).
+psql:sql/06_testes/02_testes_maquina_estados.sql:289: NOTICE:  [OK] E01 | config: transição saindo de estado terminal (CONCLUIDO -> NOVO) | esperado: REJEITADO | obtido: REJEITADO  — DTE inválido: o estado terminal "CONCLUIDO" não pode ter transição de saída (-> "NOVO").
+psql:sql/06_testes/02_testes_maquina_estados.sql:289: NOTICE:  [OK] E02 | config: marcar como terminal um estado com saídas (EM_ANDAMENTO) | esperado: REJEITADO | obtido: REJEITADO  — DTE inválido: o estado "EM_ANDAMENTO" possui transições de saída e não pode ser marcado como terminal.
+psql:sql/06_testes/02_testes_maquina_estados.sql:289: NOTICE:  [OK] E03 | config: segundo estado inicial na mesma máquina | esperado: REJEITADO | obtido: REJEITADO  — duplicate key value violates unique constraint "state_definition_um_inicial_uidx"
+psql:sql/06_testes/02_testes_maquina_estados.sql:289: NOTICE:  [OK] E04 | config: transição para estado não cadastrado | esperado: REJEITADO | obtido: REJEITADO  — insert or update on table "state_transition" violates foreign key constraint "state_transition_machine_id_to_state_fkey"
+psql:sql/06_testes/02_testes_maquina_estados.sql:289: NOTICE:  [OK] F01 | os triggers das 2 tabelas usam a MESMA função (mesmo OID)
+psql:sql/06_testes/02_testes_maquina_estados.sql:289: NOTICE:  [OK] F02 | o código da função não contém nomes de tabela, coluna ou estado da demo
  caso |                                         operacao                                          |     esperado      |      obtido       | resultado 
 ------+-------------------------------------------------------------------------------------------+-------------------+-------------------+-----------
  A01  | invoice: INSERT sem informar status (DEFAULT PENDENTE = inicial)                          | ACEITO            | ACEITO            | OK
@@ -255,15 +278,26 @@ psql:sql/06_testes/02_testes_maquina_estados.sql:234: NOTICE:  [OK] F02 | o cód
  D10  | registrar_binding com dados existentes inválidos (linha QUALQUER)                         | REJEITADO (23514) | REJEITADO (23514) | OK
  D11  | registrar_binding após corrigir os dados                                                  | ACEITO            | ACEITO            | OK
  D12  | pedido: após re-registro, NOVO -> CONCLUIDO volta a ser rejeitado                         | REJEITADO (23514) | REJEITADO (23514) | OK
+ D13  | registrar_binding em tabela com dados válidos e uma coluna chamada t                      | ACEITO            | ACEITO            | OK
+ D14  | renomear: INSERT depois de renomear a COLUNA vinculada (falha segura)                     | REJEITADO (55000) | REJEITADO (55000) | OK
+ D15  | renomear: remover_binding com o nome ANTIGO da coluna                                     | ACEITO            | ACEITO            | OK
+ D16  | renomear: após D15, nenhum trigger do motor sobra na tabela                               | VERDADEIRO        | VERDADEIRO        | OK
+ D17  | renomear: registrar_binding com o nome NOVO da coluna                                     | ACEITO            | ACEITO            | OK
+ D18  | renomear: INSERT depois de renomear a TABELA vinculada (falha segura)                     | REJEITADO (55000) | REJEITADO (55000) | OK
+ D19  | renomear: remover_binding com o nome ANTIGO da tabela                                     | ACEITO            | ACEITO            | OK
+ D20  | renomear: registrar_binding com o nome NOVO da tabela                                     | ACEITO            | ACEITO            | OK
+ D21  | renomear: exatamente 1 trigger do motor na tabela (sem trigger duplicado)                 | VERDADEIRO        | VERDADEIRO        | OK
+ D22  | renomear: após refazer o vínculo, INSERT em NOVO é aceito                                 | ACEITO            | ACEITO            | OK
+ D23  | renomear: e a transição NOVO -> CONCLUIDO continua rejeitada                              | REJEITADO (23514) | REJEITADO (23514) | OK
  E01  | config: transição saindo de estado terminal (CONCLUIDO -> NOVO)                           | REJEITADO (23514) | REJEITADO (23514) | OK
  E02  | config: marcar como terminal um estado com saídas (EM_ANDAMENTO)                          | REJEITADO (23514) | REJEITADO (23514) | OK
  E03  | config: segundo estado inicial na mesma máquina                                           | REJEITADO (23505) | REJEITADO (23505) | OK
  E04  | config: transição para estado não cadastrado                                              | REJEITADO (23503) | REJEITADO (23503) | OK
  F01  | os triggers das 2 tabelas usam a MESMA função (mesmo OID)                                 | VERDADEIRO        | VERDADEIRO        | OK
  F02  | o código da função não contém nomes de tabela, coluna ou estado da demo                   | VERDADEIRO        | VERDADEIRO        | OK
-(44 rows)
+(55 rows)
 
-psql:sql/06_testes/lib/resumo.sql:37: NOTICE:  OK: Testes Q5 (DTE) passaram — 44 casos.
+psql:sql/06_testes/lib/resumo.sql:37: NOTICE:  OK: Testes Q5 (DTE) passaram — 55 casos.
 DO
 ------------------------------------------------------------------
 Executando: sql/06_testes/03_testes_regras_semanticas.sql
