@@ -55,7 +55,7 @@
 
 \begin{abstract}
 \noindent Este relatório descreve as soluções do grupo para as Partes~1 e~2 do trabalho, implementadas em
-PostgreSQL~16 com a linguagem procedural PL/pgSQL sobre o esquema exemplo Chinook. Para cada questão são
+PostgreSQL~16, com a linguagem procedural PL/pgSQL e funções em SQL, sobre o esquema exemplo Chinook. Para cada questão são
 apresentados o enunciado, a solução adotada e sua justificativa, e o resultado obtido na execução. O código-fonte
 completo, os testes automatizados e as saídas de execução acompanham este relatório no pacote de entrega; o texto
 cita apenas os trechos necessários para explicar cada solução.
@@ -318,7 +318,7 @@ As regras são:
 \end{itemize}
 
 O procedimento \cod{bd2\_meta.registrar\_binding} verifica no catálogo a tabela, a coluna e o tipo, confere se os
-dados já existentes estão em estados válidos e instala o trigger. Ela é idempotente: chamá-la novamente para a
+dados já existentes estão em estados válidos e instala o trigger. Ele é idempotente: chamá-lo novamente para a
 mesma coluna atualiza o vínculo sem duplicá-lo. O procedimento \cod{remover\_binding} desfaz a instalação. O uso
 completo para uma coluna nova resume-se a:
 
@@ -376,7 +376,7 @@ B & Pedidos (outra tabela, outra coluna, outra política): estado nulo, estado d
     atualização de várias linhas desfeita por completo quando uma transição é inválida & \numDTEb \\
 C & Estado desativado; vínculo ou diagrama inativo (falha segura) & \numDTEc \\
 D & Registro e remoção de vínculos: idempotência, tabela, coluna ou tipo inválidos, recusa de dados existentes
-    fora do diagrama & \numDTEd \\
+    fora do diagrama, tabela com coluna de nome \cod{t}, renomeação da coluna e da tabela vinculadas & \numDTEd \\
 E & Integridade do próprio diagrama: transição a partir de estado terminal, dois estados iniciais, estado
     inexistente & \numDTEe \\
 F & Generalidade: as duas tabelas usam a mesma função, cujo código não contém nomes de tabela, coluna ou estado
@@ -519,9 +519,9 @@ R-TRG-02); uso das sequências das chaves primárias. Não pode excluir dados. \
 O usuário \cod{bd2\_app} recebe uma senha de demonstração (\cod{bd2\_app}), o que permite conectar-se de fato
 como esse usuário.
 
-\paragraph{Resultado.} Os \numCasosS{} testes executados como \cod{bd2\_app} (\cod{evidencias/p2\_testes\_regras.txt})
-confirmam que o procedimento cria a fatura com os
-itens e o total corretos e rejeita lista vazia ou malformada, cliente ou faixa inexistentes e quantidades iguais a zero,
+\paragraph{Resultado.} Os \numCasosSApp{} casos executados como \cod{bd2\_app}, complementados por \numVerifS{}
+verificações do resultado feitas pelo administrador (\cod{evidencias/p2\_testes\_regras.txt}), confirmam que o
+procedimento cria a fatura com os itens e o total corretos e rejeita lista vazia ou malformada, cliente ou faixa inexistentes e quantidades iguais a zero,
 negativas ou fracionárias, sem deixar nenhuma fatura parcial gravada. Inserção, alteração, exclusão,
 \cod{TRUNCATE} e mesmo leitura diretos nas tabelas de faturas são negados por falta de permissão. Outros \numCasosP{} casos
 conferem no catálogo os atributos dos papéis e do procedimento (\cod{evidencias/p2\_permissoes.txt} mostra os
@@ -602,7 +602,9 @@ Um teste executado numa única sessão não demonstra o comportamento concorrent
   \item \textbf{Tipos de coluna de estado.} O motor aceita colunas de texto, enumeração e inteiras. Colunas
         \cod{char(n)} são recusadas, porque o preenchimento com espaços prejudica a comparação dos estados. Os vínculos são
         guardados por nome: se a tabela ou a coluna vinculada for renomeada, o motor passa a rejeitar as operações
-        nessa tabela (falha segura) até que o vínculo seja refeito.
+        nessa tabela (falha segura). Para restabelecer a validação, remove-se o vínculo com os nomes antigos
+        (\cod{remover\_binding} localiza o trigger pelo catálogo, mesmo após a renomeação) e registra-se de novo com
+        os nomes atuais; os testes D14 a D23 percorrem esse procedimento.
   \item \textbf{Exclusão de linhas.} Excluir uma linha não é uma transição de estado e não é validado pelo motor.
         Num diagrama com política \cod{ANY\_VALID\_STATE}, excluir e reinserir equivale a recriar a linha em outro
         estado; quando isso não for desejado, deve-se usar \cod{INITIAL\_ONLY} ou retirar o direito de exclusão.
@@ -619,7 +621,7 @@ Um teste executado numa única sessão não demonstra o comportamento concorrent
 % =====================================================================
 \section{Conclusão}
 
-Todas as questões das duas partes foram implementadas em PL/pgSQL sobre o Chinook. As rotinas de catálogo e o
+Todas as questões das duas partes foram implementadas em PL/pgSQL e SQL sobre o Chinook. As rotinas de catálogo e o
 motor de estados da Parte~1 são genéricos e não dependem do esquema exemplo; o motor, em particular, permite
 controlar qualquer coluna de estado apenas com dados de configuração. Na Parte~2, as três regras semânticas foram
 garantidas por triggers e por um procedimento armazenado combinado a permissões, considerando inclusive o acesso
