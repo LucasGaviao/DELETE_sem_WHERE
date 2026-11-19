@@ -1,0 +1,74 @@
+== Tudo abaixo (passos 1 a 5) ocorre numa transação desfeita com ROLLBACK no fim.
+== 1. Índices de public.invoice_line ANTES da remoção
+           indice            |     colunas     |     tipo     
+-----------------------------+-----------------+--------------
+ invoice_line_invoice_id_idx | invoice_id      | independente
+ invoice_line_pkey           | invoice_line_id | PK
+ invoice_line_track_id_idx   | track_id        | independente
+(3 rows)
+
+== 2. CALL bd2_meta.remover_indices_tabela('public', 'invoice_line')   -- padrão seguro
+           objeto            | tipo  |           acao           | resultado  
+-----------------------------+-------+--------------------------+------------
+ invoice_line_invoice_id_idx | INDEX | DROP INDEX               | REMOVIDO
+ invoice_line_track_id_idx   | INDEX | DROP INDEX               | REMOVIDO
+ invoice_line_pkey           | p     | PRESERVAR CONSTRAINT (p) | PRESERVADO
+(3 rows)
+
+== 3. Índices restantes (somente o que sustenta a PK)
+      indice       |     colunas     | tipo 
+-------------------+-----------------+------
+ invoice_line_pkey | invoice_line_id | PK
+(1 row)
+
+== 4. CALL bd2_meta.remover_indices_tabela('public', 'invoice_line', p_incluir_constraints => true)   -- remove TODOS
+      objeto       | tipo |             acao             | resultado 
+-------------------+------+------------------------------+-----------
+ invoice_line_pkey | p    | DROP CONSTRAINT (p) RESTRICT | REMOVIDO
+(1 row)
+
+== 5. Índices restantes em public.invoice_line após remover TODOS
+ indices_restantes 
+-------------------
+                 0
+(1 row)
+
+== 6. Após o ROLLBACK, public.invoice_line voltou a ter seus índices
+ indices 
+---------
+       3
+(1 row)
+
+== 7. Proteção: remover a PK de public.employee SEM cascade (outras tabelas a referenciam)
+                                                  resultado                                                   
+--------------------------------------------------------------------------------------------------------------
+ REJEITADO [2BP01]: cannot drop constraint employee_pkey on table employee because other objects depend on it
+(1 row)
+
+== 8. public.employee COM p_cascade => true (transação desfeita com ROLLBACK no fim)
+==    FKs que referenciam employee antes da remoção:
+              fk              |          origem          
+------------------------------+--------------------------
+ customer_support_rep_id_fkey | customer(support_rep_id)
+ employee_reports_to_fkey     | employee(reports_to)
+(2 rows)
+
+==    CALL bd2_meta.remover_indices_tabela('public', 'employee', p_incluir_constraints => true, p_cascade => true)
+         objeto          | tipo  |            acao             | resultado 
+-------------------------+-------+-----------------------------+-----------
+ employee_reports_to_idx | INDEX | DROP INDEX                  | REMOVIDO
+ employee_pkey           | p     | DROP CONSTRAINT (p) CASCADE | REMOVIDO
+(2 rows)
+
+==    Depois: índices restantes em employee e FKs que ainda o referenciam
+ indices_restantes | fks_restantes 
+-------------------+---------------
+                 0 |             0
+(1 row)
+
+== 9. Após o ROLLBACK, employee voltou a ter seus índices e FKs
+ indices | fks 
+---------+-----
+       2 |   2
+(1 row)
+

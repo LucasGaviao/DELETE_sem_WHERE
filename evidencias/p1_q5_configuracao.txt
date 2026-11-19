@@ -1,0 +1,37 @@
+== Máquinas de estado
+    maquina    | politica_insercao | ativa |                                 descricao                                  
+---------------+-------------------+-------+----------------------------------------------------------------------------
+ INVOICE_STATE | INITIAL_ONLY      | t     | Ciclo de vida de uma fatura (public.invoice.status)
+ PEDIDO_STATE  | ANY_VALID_STATE   | t     | Ciclo de vida de um pedido de demonstração (bd2_demo.pedido_demo.situacao)
+(2 rows)
+
+== Estados
+    maquina    |    estado    | inicial | terminal | ativo 
+---------------+--------------+---------+----------+-------
+ INVOICE_STATE | PENDENTE     | t       | f        | t
+ INVOICE_STATE | CANCELADO    | f       | t        | t
+ INVOICE_STATE | PAGO         | f       | t        | t
+ PEDIDO_STATE  | NOVO         | t       | f        | t
+ PEDIDO_STATE  | EM_ANDAMENTO | f       | f        | t
+ PEDIDO_STATE  | CANCELADO    | f       | t        | t
+ PEDIDO_STATE  | CONCLUIDO    | f       | t        | t
+(7 rows)
+
+== Transições permitidas
+    maquina    |      de      |     para     |              descricao              
+---------------+--------------+--------------+-------------------------------------
+ INVOICE_STATE | PENDENTE     | CANCELADO    | Fatura cancelada antes do pagamento
+ INVOICE_STATE | PENDENTE     | PAGO         | Pagamento confirmado
+ PEDIDO_STATE  | EM_ANDAMENTO | CANCELADO    | Cancelado durante o processamento
+ PEDIDO_STATE  | EM_ANDAMENTO | CONCLUIDO    | Pedido entregue
+ PEDIDO_STATE  | NOVO         | CANCELADO    | Cancelado antes do processamento
+ PEDIDO_STATE  | NOVO         | EM_ANDAMENTO | Início do processamento
+(6 rows)
+
+== Vínculos (bindings) e triggers instalados
+            coluna             |    maquina    | binding_ativo | trigger_instalado |          trigger_name           
+-------------------------------+---------------+---------------+-------------------+---------------------------------
+ bd2_demo.pedido_demo.situacao | PEDIDO_STATE  | t             | t                 | zz_fsm_ee13082de46496b8a53361a1
+ public.invoice.status         | INVOICE_STATE | t             | t                 | zz_fsm_af06ab1336842d4bd27fa167
+(2 rows)
+

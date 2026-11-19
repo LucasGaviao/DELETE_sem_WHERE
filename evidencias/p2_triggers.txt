@@ -1,0 +1,10 @@
+        tabela        |             trigger             |           funcao            |                                                                                         definicao                                                                                         
+----------------------+---------------------------------+-----------------------------+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ bd2_demo.pedido_demo | zz_fsm_ee13082de46496b8a53361a1 | fn_validar_transicao_estado | CREATE TRIGGER zz_fsm_ee13082de46496b8a53361a1 BEFORE INSERT OR UPDATE ON bd2_demo.pedido_demo FOR EACH ROW EXECUTE FUNCTION bd2_meta.fn_validar_transicao_estado('situacao')
+ public.employee      | trg_employee_sem_ciclo          | fn_employee_sem_ciclo       | CREATE TRIGGER trg_employee_sem_ciclo BEFORE INSERT OR UPDATE OF reports_to, employee_id ON public.employee FOR EACH ROW EXECUTE FUNCTION fn_employee_sem_ciclo()
+ public.invoice       | trg_invoice_total_before        | fn_invoice_total_before     | CREATE TRIGGER trg_invoice_total_before BEFORE INSERT OR UPDATE OF total, invoice_id ON public.invoice FOR EACH ROW EXECUTE FUNCTION fn_invoice_total_before()
+ public.invoice       | zz_fsm_af06ab1336842d4bd27fa167 | fn_validar_transicao_estado | CREATE TRIGGER zz_fsm_af06ab1336842d4bd27fa167 BEFORE INSERT OR UPDATE ON public.invoice FOR EACH ROW EXECUTE FUNCTION bd2_meta.fn_validar_transicao_estado('status')
+ public.invoice_line  | trg_invoice_line_recalc         | fn_invoice_line_recalc      | CREATE TRIGGER trg_invoice_line_recalc AFTER INSERT OR DELETE OR UPDATE OF invoice_id, unit_price, quantity ON public.invoice_line FOR EACH ROW EXECUTE FUNCTION fn_invoice_line_recalc()
+ public.invoice_line  | trg_invoice_line_truncate       | fn_invoice_line_truncate    | CREATE TRIGGER trg_invoice_line_truncate AFTER TRUNCATE ON public.invoice_line FOR EACH STATEMENT EXECUTE FUNCTION fn_invoice_line_truncate()
+(6 rows)
+

@@ -1,0 +1,34 @@
+     tabela     |             indice             |        colunas        | metodo | tipo 
+----------------+--------------------------------+-----------------------+--------+------
+ album          | album_artist_id_idx            | artist_id             | btree  | 
+ album          | album_pkey                     | album_id              | btree  | PK
+ artist         | artist_pkey                    | artist_id             | btree  | PK
+ customer       | customer_pkey                  | customer_id           | btree  | PK
+ customer       | customer_support_rep_id_idx    | support_rep_id        | btree  | 
+ employee       | employee_pkey                  | employee_id           | btree  | PK
+ employee       | employee_reports_to_idx        | reports_to            | btree  | 
+ genre          | genre_pkey                     | genre_id              | btree  | PK
+ invoice        | invoice_customer_id_idx        | customer_id           | btree  | 
+ invoice        | invoice_pkey                   | invoice_id            | btree  | PK
+ invoice_line   | invoice_line_invoice_id_idx    | invoice_id            | btree  | 
+ invoice_line   | invoice_line_pkey              | invoice_line_id       | btree  | PK
+ invoice_line   | invoice_line_track_id_idx      | track_id              | btree  | 
+ media_type     | media_type_pkey                | media_type_id         | btree  | PK
+ playlist       | playlist_pkey                  | playlist_id           | btree  | PK
+ playlist_track | playlist_track_pkey            | playlist_id, track_id | btree  | PK
+ playlist_track | playlist_track_playlist_id_idx | playlist_id           | btree  | 
+ playlist_track | playlist_track_track_id_idx    | track_id              | btree  | 
+ track          | track_album_id_idx             | album_id              | btree  | 
+ track          | track_genre_id_idx             | genre_id              | btree  | 
+ track          | track_media_type_id_idx        | media_type_id         | btree  | 
+ track          | track_pkey                     | track_id              | btree  | PK
+(22 rows)
+
+== Total de índices por schema (listar_indices() sem filtro de schema; sistema excluído)
+  schema  | indices 
+----------+---------
+ bd2_demo |       1
+ bd2_meta |       7
+ public   |      22
+(3 rows)
+

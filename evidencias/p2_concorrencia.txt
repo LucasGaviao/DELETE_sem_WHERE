@@ -1,0 +1,12 @@
+==================================================================
+Testes de concorrência (N = 30 sessões paralelas) e de conexão real
+==================================================================
+[OK] C1 R-TRG-02: 30 inserções paralelas na mesma fatura; total 59.40 = 59.40; 0 erros
+[OK] C2 R-TRG-02: 30 movimentações cruzadas entre 2 faturas; ambos os totais corretos; 0 deadlocks
+[OK] C3 R-TRG-01 (READ COMMITTED): sessão 1 confirmou; sessão 2 rejeitada (R-TRG-01: definir 15 como superior de 16 criaria um ciclo na hierarquia (cadeia: 15 -> 16)); estado final: CONC_A->16, CONC_B->NULL (sem ciclo)
+[OK] C4 R-TRG-01 (REPEATABLE READ): sessão 1 confirmou; sessão 2 rejeitada (could not serialize access due to concurrent update); estado final: CONC_A->16, CONC_B->NULL (sem ciclo)
+[OK] C5 R-SP-01: 30 chamadas paralelas como bd2_app; 30 faturas, todas com 2 itens e total correto
+[OK] L1 R-SP-01: login real como bd2_app com senha (senha errada: password authentication failed for user bd2_app); CALL criou a fatura 452; INSERT direto: permission denied for table invoice; SELECT direto: permission denied for table invoice
+[OK] Auditoria final: 0 faturas com total divergente
+------------------------------------------------------------------
+OK: Testes de concorrência passaram.
