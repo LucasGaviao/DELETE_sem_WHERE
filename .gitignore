@@ -22,3 +22,7 @@ Desktop.ini
 *.log
 !evidencias/*.log
 !evidencias/*.txt
+
+# Artefatos gerados (relatório HTML intermediário e pacote de entrega)
+relatorio/build/
+dist/
