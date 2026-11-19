@@ -80,6 +80,10 @@ def gerar_numeros() -> None:
 
     dte = linhas_por_grupo("p1_q5_cenario_teste.txt")
     p2 = linhas_por_grupo("p2_testes_regras.txt")
+    # Casos S: os executados como bd2_app (ACEITO/REJEITADO) e as verificações
+    # de resultado feitas pelo administrador (esperado VERDADEIRO)
+    linhas_s = [l for l in ler("p2_testes_regras.txt").splitlines() if re.match(r"^\s*S\d+\s*\|", l)]
+    verif_s = sum(1 for l in linhas_s if l.split("|")[2].strip() == "VERDADEIRO")
 
     prova = {}
     for linha in ler("p1_q4_prova.txt").splitlines():
@@ -110,6 +114,7 @@ def gerar_numeros() -> None:
         **{f"numDTE{g.lower()}": dte.get(g, 0) for g in "ABCDEF"},
         "numCasosH": p2.get("H", 0), "numCasosT": p2.get("T", 0),
         "numCasosS": p2.get("S", 0), "numCasosP": p2.get("P", 0),
+        "numCasosSApp": p2.get("S", 0) - verif_s, "numVerifS": verif_s,
         "numSessoes": m.group(1),
     }
     texto = ["% Gerado por relatorio/gerar_relatorio.py a partir de evidencias/. Não editar à mão."]
