@@ -1,0 +1,6 @@
+# Nomes dos integrantes do grupo, um por linha (aparecem na capa do relatório).
+# Linhas iniciadas por # são ignoradas.
+Alex Felippe Santana Guimarães
+Gabriel Baeta Pereira
+Lucas D'almeida Gavião
+Vitor Lemos da Silva
