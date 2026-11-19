@@ -4,14 +4,32 @@
 # módulos SQL em ordem e executa a suíte de testes.
 # Pode ser executado dentro do container Docker ou na máquina host (se psql
 # estiver instalado ou via docker compose exec).
+#
+# Toda a saída é gravada em evidencias/run_all.log; as tabelas de resultado de
+# cada questão são gravadas em evidencias/*.txt (usadas pelo relatório).
 # =============================================================================
 set -euo pipefail
+
+SCRIPT="$(cd "$(dirname "$0")" && pwd)/$(basename "$0")"
+cd "$(dirname "$SCRIPT")"
+
+# Reexecuta o próprio script com a saída duplicada para o log de evidência.
+if [ -z "${BD2_RUN_ALL_LOG:-}" ]; then
+    mkdir -p evidencias
+    rm -f evidencias/*.txt evidencias/*.sql evidencias/*.log
+    BD2_RUN_ALL_LOG=1 "${BASH:-sh}" "$SCRIPT" "$@" 2>&1 | tee evidencias/run_all.log
+    exit 0
+fi
 
 PGHOST="${PGHOST:-localhost}"
 PGPORT="${PGPORT:-5432}"
 PGUSER="${PGUSER:-postgres}"
 PGPASSWORD="${PGPASSWORD:-postgres}"
-export PGPASSWORD
+export PGHOST PGPORT PGUSER PGPASSWORD
+
+# Senha de demonstração do usuário da aplicação (Parte 2 — Q3)
+BD2_APP_PASSWORD="${BD2_APP_PASSWORD:-bd2_app}"
+export BD2_APP_PASSWORD
 
 DB_ADMIN="${POSTGRES_DB:-postgres}"
 DB_TARGET="${CHINOOK_DB:-chinook_serial}"
@@ -59,24 +77,32 @@ echo "3. Verificando ambiente inicial (00_verificar_ambiente.sql)"
 echo "=================================================================="
 run_psql -d "$DB_TARGET" -f sql/00_ambiente/00_verificar_ambiente.sql
 
-# Executa em ordem os arquivos .sql dos módulos 01 a 06 (quando implementados)
+echo "=================================================================="
+echo "4. Instalando os módulos, executando os testes e gerando evidências"
+echo "=================================================================="
+# Executa em ordem os arquivos .sql dos módulos 01 a 07
 for dir in \
     sql/01_catalogos \
     sql/02_administracao \
     sql/03_ddl_dinamico \
     sql/04_maquina_estados \
     sql/05_regras_semanticas \
-    sql/06_testes
+    sql/06_testes \
+    sql/07_evidencias
 do
     if [ -d "$dir" ]; then
         for file in "$dir"/*.sql; do
             [ -e "$file" ] || continue
             echo "------------------------------------------------------------------"
             echo "Executando: $file"
-            run_psql -d "$DB_TARGET" -f "$file"
+            run_psql -d "$DB_TARGET" -v evid_dir=evidencias -v bd2_app_senha="$BD2_APP_PASSWORD" -f "$file"
         done
     fi
 done
+
+echo "------------------------------------------------------------------"
+echo "Executando: sql/06_testes/04_concorrencia.sh"
+CHINOOK_DB="$DB_TARGET" sh sql/06_testes/04_concorrencia.sh | tee evidencias/p2_concorrencia.txt
 
 echo "=================================================================="
 echo "Execução concluída com sucesso!"
