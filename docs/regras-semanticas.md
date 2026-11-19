@@ -9,7 +9,7 @@ Este documento atende à **Questão 1 da Parte 2**, descrevendo textualmente as 
 | Código | Nome da Regra | Tabelas Envolvidas | Mecanismo | Script SQL |
 |---|---|---|---|---|
 | **R-TRG-01** | Hierarquia Acíclica de Funcionários | `public.employee` (`employee_id`, `reports_to`) | Trigger `BEFORE INSERT OR UPDATE` + CTE Recursiva + Advisory Lock | `sql/05_regras_semanticas/01_trigger_hierarquia_employee.sql` |
-| **R-TRG-02** | Integridade do Total da Fatura (Questão 4) | `public.invoice` (`total`), `public.invoice_line` (`unit_price`, `quantity`) | Triggers `BEFORE` em `invoice` (A) e `AFTER` em `invoice_line` (C) | `sql/05_regras_semanticas/02_integridade_invoice_total.sql` |
+| **R-TRG-02** | Integridade do Total da Fatura (Questão 4) | `public.invoice` (`total`), `public.invoice_line` (`unit_price`, `quantity`) | Triggers `BEFORE` em `invoice` (A), `AFTER` por linha (B) e `AFTER TRUNCATE` (C) em `invoice_line` | `sql/05_regras_semanticas/02_integridade_invoice_total.sql` |
 | **R-SP-01** | Criação Atômica de Fatura com Itens Obrigatórios | `public.invoice`, `public.invoice_line`, `public.customer`, `public.track` | Stored Procedure (`SECURITY DEFINER`) + Controle de Permissões (`bd2_owner` / `bd2_app`) | `sql/05_regras_semanticas/03_procedure_criar_fatura.sql` |
 
 ---
@@ -24,9 +24,10 @@ Na tabela `employee`, o relacionamento de subordinação representado pela colun
 - Uma restrição `CHECK (reports_to <> employee_id)` impediria apenas a autorreferência direta de comprimento 1 (`A -> A`), mas é incapaz de consultar outras linhas da tabela para detectar ciclos indiretos (`A -> B -> A` ou `A -> B -> C -> A`).
 
 ### Mecanismo de Implementação
-- Trigger `BEFORE INSERT OR UPDATE OF reports_to ON public.employee FOR EACH ROW`.
+- Trigger `BEFORE INSERT OR UPDATE OF reports_to, employee_id ON public.employee FOR EACH ROW` (`trg_employee_sem_ciclo`).
 - Serialização via `pg_advisory_xact_lock` para evitar que duas transações simultâneas fechem um ciclo concorrentemente.
-- Busca em profundidade/largura com `WITH RECURSIVE` subindo a cadeia de `reports_to` a partir de `NEW.reports_to` e verificando se `NEW.employee_id` aparece no caminho.
+- `WITH RECURSIVE` sobe a cadeia de superiores a partir de `NEW.reports_to`; há ciclo se algum elo **é** `NEW.employee_id` ou **se reporta** a ele (o segundo caso cobre `INSERT`/`UPDATE` de várias linhas no mesmo comando).
+- Em `REPEATABLE READ`/`SERIALIZABLE` o snapshot é fixo; a cadeia lida é travada com `FOR SHARE`, e uma alteração concorrente gera erro de serialização (`40001`) em vez de um ciclo. Controle negativo verificado: sem essa trava, duas sessões em `REPEATABLE READ` conseguem criar o ciclo.
 
 ---
 
@@ -41,8 +42,11 @@ $$\text{invoice.total} = \text{COALESCE}\left(\sum (\text{invoice\_line.unit\_pr
 
 ### Mecanismo de Implementação
 Combinação de dois triggers:
-1. **Trigger A (`trg_invoice_total_before`):** `BEFORE INSERT OR UPDATE OF total ON public.invoice FOR EACH ROW` — calcula e sobrescreve `NEW.total` a partir das linhas existentes em `invoice_line`, impedindo adulteração manual do cabeçalho.
-2. **Trigger C (`trg_invoiceline_recalc`):** `AFTER INSERT OR UPDATE OR DELETE ON public.invoice_line FOR EACH ROW` — recalcula `invoice.total` para o `NEW.invoice_id` e/ou `OLD.invoice_id` (cobrindo inclusive transferência de item entre duas faturas).
+1. **Trigger A (`trg_invoice_total_before`):** `BEFORE INSERT OR UPDATE OF total, invoice_id ON public.invoice FOR EACH ROW` — calcula e sobrescreve `NEW.total` a partir das linhas existentes em `invoice_line`, impedindo adulteração manual do cabeçalho.
+2. **Trigger B (`trg_invoice_line_recalc`):** `AFTER INSERT OR DELETE OR UPDATE OF invoice_id, unit_price, quantity ON public.invoice_line FOR EACH ROW` — recalcula `invoice.total` para o `NEW.invoice_id` e/ou `OLD.invoice_id` (cobrindo transferência de item entre duas faturas), em ordem crescente de `invoice_id` (ordem determinística de locks, sem deadlock).
+3. **Trigger C (`trg_invoice_line_truncate`):** `AFTER TRUNCATE ON public.invoice_line FOR EACH STATEMENT` — `TRUNCATE` não dispara triggers de linha; sem itens, todos os totais passam a `0.00`.
+
+**Limite:** superusuário/dono da tabela pode desabilitar triggers (`ALTER TABLE ... DISABLE TRIGGER`, `session_replication_role = replica`).
 
 ---
 
@@ -55,6 +59,7 @@ Toda fatura criada pelo usuário operacional da aplicação (`bd2_app`) deve obr
 - Chaves estrangeiras no modelo relacional são definidas do lado N (`invoice_line`) apontando para o lado 1 (`invoice`). Isso impede que um item exista sem fatura, mas **não impede que uma fatura seja inserida sem itens** (cardinalidade mínima 1 no lado N).
 
 ### Mecanismo de Implementação (Stored Procedure + Permissões)
-- **Stored Procedure:** `public.criar_fatura_com_itens(p_customer_id int, p_itens jsonb)` criada com `SECURITY DEFINER` e `SET search_path = pg_catalog, public`, pertencente ao papel `bd2_owner` (`NOLOGIN`).
-- **Validações na Procedure:** verifica que `p_itens` é um array JSON não vazio, que o cliente existe, que cada item tem `quantity > 0` e `track_id` existente, insere o cabeçalho em `invoice` e os itens em `invoice_line` na mesma transação (acionando automaticamente o cálculo de `total` via `R-TRG-02`).
-- **Isolamento por Permissões:** o usuário `bd2_app` (`LOGIN`) **não possui** privilégios de `INSERT`, `UPDATE`, `DELETE` ou `TRUNCATE` em `public.invoice` nem em `public.invoice_line`, possuindo exclusivamente `GRANT EXECUTE ON PROCEDURE public.criar_fatura_com_itens(int, jsonb)`.
+- **Stored Procedure:** `public.criar_fatura_com_itens(p_customer_id int, p_itens jsonb, INOUT p_invoice_id int DEFAULT NULL)` — chamada com 2 argumentos e devolve o `invoice_id` criado. Criada com `SECURITY DEFINER` e `SET search_path = pg_catalog, public, pg_temp` (`pg_temp` por último, como recomenda a documentação do PostgreSQL para funções `SECURITY DEFINER`), pertencente ao papel `bd2_owner` (`NOLOGIN`).
+- **Validações na Procedure:** verifica que `p_itens` é um array JSON não vazio, que cada item tem `track_id` e `quantity` inteiros, `quantity > 0` e faixa existente (todos validados **antes** de gravar), e que o cliente existe; insere o cabeçalho (cobrança copiada do cliente) e os itens com o preço oficial `track.unit_price` na mesma transação, acionando o cálculo de `total` via `R-TRG-02`.
+- **Isolamento por Permissões:** o usuário `bd2_app` (`LOGIN`) **não possui** nenhum privilégio (nem `SELECT`) em `public.invoice` e `public.invoice_line`, possuindo exclusivamente `EXECUTE` na procedure. `bd2_owner` tem o mínimo: `SELECT` em `customer`/`track`; `SELECT, INSERT` em `invoice`/`invoice_line` (o `INSERT ... RETURNING` exige `SELECT`); `UPDATE (total)` em `invoice` (trigger B); `USAGE` nas sequences.
+- **Limite:** superusuário e `bd2_owner` contornam a regra por definição.
