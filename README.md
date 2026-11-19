@@ -4,7 +4,7 @@ Repositório oficial do trabalho em grupo da disciplina **Banco de Dados II** (P
 
 ---
 
-## 1. Especificação doAmbiente e Reprodutibilidade
+## 1. Especificação do Ambiente e Reprodutibilidade
 
 | Item | Valor Padronizado |
 |---|---|
@@ -24,6 +24,7 @@ Todos os integrantes do grupo podem subir exatamente a mesma versão do PostgreS
 ### Pré-requisitos
 - **Docker** e **Docker Compose** (Docker Desktop no Windows/macOS ou Docker Engine no Linux)
 - **Git**
+- **Porta `5432` livre** na máquina host: o container publica o PostgreSQL nessa porta. Se já houver outro PostgreSQL (local ou em outro container) usando a `5432`, o `docker compose up` falha com `Bind for 0.0.0.0:5432 failed: port is already allocated`. Pare o serviço que ocupa a porta antes de executar (para verificar: `docker ps` ou `netstat -ano | findstr 5432` no Windows / `ss -ltnp | grep 5432` no Linux).
 
 ### Passo a Passo Rápido
 
@@ -89,9 +90,22 @@ trabalho_final_bd2/
 │   │   ├── 01_trigger_hierarquia_employee.sql # Parte 2 - Q2 (R-TRG-01: ciclo em employee)
 │   │   ├── 02_integridade_invoice_total.sql   # Parte 2 - Q4 (R-TRG-02: invoice.total)
 │   │   └── 03_procedure_criar_fatura.sql      # Parte 2 - Q3 (R-SP-01: criar_fatura_com_itens)
-│   └── 06_testes/
-│       └── 00_suite_testes.sql                # Testes automatizados positivos e negativos
-└── evidencias/                    # Logs e saídas de execução comprovando os testes
+│   ├── 06_testes/
+│   │   ├── lib/harness.sql, lib/resumo.sql    # Funções auxiliares comuns dos testes
+│   │   ├── 01_testes_parte1_q1_a_q4.sql         # P1 - Q1 a Q4
+│   │   ├── 02_testes_maquina_estados.sql      # P1 - Q5 (cenário de teste do DTE)
+│   │   ├── 03_testes_regras_semanticas.sql    # P2 - R-TRG-01, R-TRG-02, R-SP-01 e permissões
+│   │   └── 04_concorrencia.sh                 # Sessões psql paralelas (P2)
+│   └── 07_evidencias/
+│       └── 01_gerar_evidencias.sql            # Saídas reais usadas no relatório
+├── relatorio/
+│   ├── relatorio.tex                          # Texto do relatório (LaTeX, classe article)
+│   ├── numeros.tex                            # Números citados no texto, extraídos de evidencias/ (gerado)
+│   ├── gerar_relatorio.py                     # Gera numeros.tex e compila relatorio/Relatorio_Trabalho_BD2.pdf
+│   └── integrantes.txt                        # Nomes do grupo (capa)
+├── entrega/README_ENTREGA.md                  # README que vai no pacote para o professor
+├── empacotar_entrega.sh                       # Gera dist/Trabalho_BD2.zip
+└── evidencias/                    # Saídas da última execução (run_all.log + um arquivo por questão)
 ```
 
 ---
@@ -112,7 +126,27 @@ trabalho_final_bd2/
 
 ---
 
-## 5. Fluxo de Trabalho Git para o Grupo
+## 5. Relatório e Pacote de Entrega
+
+A entrega é o **relatório em PDF** + o **código para executar tudo**. O relatório é um texto formal em LaTeX que explica
+as soluções (o código e as saídas completas vão no pacote). Os números citados no texto (casos de teste, índices, FKs)
+são extraídos das evidências da última execução, então ele deve ser regenerado sempre que o código mudar:
+
+```bash
+./run_all.sh                             # 1. executa tudo e atualiza evidencias/
+python3 relatorio/gerar_relatorio.py     # 2. gera relatorio/Relatorio_Trabalho_BD2.pdf (TeX Live local ou Docker)
+./empacotar_entrega.sh                   # 3. gera dist/Trabalho_BD2.zip
+```
+
+- O texto do relatório fica em `relatorio/relatorio.tex`; os nomes da capa em `relatorio/integrantes.txt`.
+- A compilação usa o TeX Live local se ele tiver todos os pacotes; senão, a imagem Docker `texlive/texlive:latest-medium`
+  (~1 GB no primeiro uso). Também é possível compilar no Overleaf enviando `relatorio.tex` e `numeros.tex`.
+- `empacotar_entrega.sh` recusa empacotar se a última execução falhou ou se o PDF estiver desatualizado.
+- Antes de enviar, descompacte o `.zip` numa pasta limpa e rode `./run_all.sh` de lá, como o professor fará.
+
+---
+
+## 6. Fluxo de Trabalho Git para o Grupo
 
 1. Clone o repositório e suba o ambiente com `docker compose up -d`.
 2. Crie uma branch por tarefa/questão (ex.: `feat/p1-q1-listar-indices`, `feat/p1-q5-maquina-estados`, `feat/p2-regras-semanticas`).
