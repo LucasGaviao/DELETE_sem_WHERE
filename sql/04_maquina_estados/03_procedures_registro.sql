@@ -112,15 +112,17 @@ BEGIN
 
     -- 5. Dados já existentes precisam estar em estados válidos da máquina
     --    (senão a próxima transição dessas linhas seria imprevisível).
+    --    "linha.*" referencia a linha inteira mesmo que a tabela tenha uma
+    --    coluna com o mesmo nome do apelido (to_jsonb(linha) pegaria a coluna).
     EXECUTE format(
         'SELECT count(*)
-           FROM %I.%I t
+           FROM %I.%I linha
           WHERE NOT EXISTS (
                 SELECT 1
                   FROM bd2_meta.state_definition d
                  WHERE d.machine_id = $1
                    AND d.active
-                   AND d.state_code = (to_jsonb(t) ->> %L))',
+                   AND d.state_code = (to_jsonb(linha.*) ->> %L))',
         p_schema, p_tabela, p_coluna)
       INTO v_invalidos
      USING p_machine_id;
@@ -187,6 +189,12 @@ $$;
 
 -- -----------------------------------------------------------------------------
 -- remover_binding: remove o trigger e desativa o binding (sem trigger órfão)
+--
+-- Os nomes informados são os do binding (os que foram registrados). O trigger
+-- é localizado pelo catálogo (nome determinístico + função do motor), e não
+-- pelo nome atual da tabela, de modo que funciona também depois que a tabela
+-- ou a coluna foram renomeadas: remove-se com os nomes antigos e registra-se
+-- de novo com os novos.
 -- -----------------------------------------------------------------------------
 CREATE OR REPLACE PROCEDURE bd2_meta.remover_binding(
     p_schema text,
@@ -197,7 +205,9 @@ LANGUAGE plpgsql
 SET search_path = pg_catalog, pg_temp
 AS $$
 DECLARE
-    v_trigger text;
+    v_trigger    text;
+    v_tg         record;
+    v_removidos  integer := 0;
 BEGIN
     SELECT b.trigger_name INTO v_trigger
       FROM bd2_meta.state_binding b
@@ -210,12 +220,15 @@ BEGIN
         RETURN;
     END IF;
 
-    IF EXISTS (
-        SELECT 1 FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace
-         WHERE n.nspname = p_schema AND c.relname = p_tabela
-    ) THEN
-        EXECUTE format('DROP TRIGGER IF EXISTS %I ON %I.%I', v_trigger, p_schema, p_tabela);
-    END IF;
+    FOR v_tg IN
+        SELECT tg.tgname, tg.tgrelid::regclass AS tabela_atual
+          FROM pg_trigger tg
+         WHERE tg.tgname = v_trigger
+           AND tg.tgfoid = 'bd2_meta.fn_validar_transicao_estado()'::regprocedure
+    LOOP
+        EXECUTE format('DROP TRIGGER %I ON %s', v_tg.tgname, v_tg.tabela_atual);
+        v_removidos := v_removidos + 1;
+    END LOOP;
 
     UPDATE bd2_meta.state_binding
        SET active = false
@@ -223,8 +236,13 @@ BEGIN
        AND table_name  = p_tabela
        AND column_name = p_coluna;
 
-    RAISE NOTICE 'Binding removido: %.%.% (trigger % excluído, binding desativado).',
-                 p_schema, p_tabela, p_coluna, v_trigger;
+    IF v_removidos > 0 THEN
+        RAISE NOTICE 'Binding removido: %.%.% (trigger % excluído, binding desativado).',
+                     p_schema, p_tabela, p_coluna, v_trigger;
+    ELSE
+        RAISE NOTICE 'Binding desativado: %.%.% (o trigger % não foi encontrado; nada a excluir).',
+                     p_schema, p_tabela, p_coluna, v_trigger;
+    END IF;
 END;
 $$;
 

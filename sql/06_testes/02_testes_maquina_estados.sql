@@ -185,6 +185,61 @@ BEGIN
     PERFORM pg_temp.caso('D12', 'pedido: após re-registro, NOVO -> CONCLUIDO volta a ser rejeitado',
             format('UPDATE bd2_demo.pedido_demo SET situacao = ''CONCLUIDO'' WHERE pedido_id = %s', v_ped3), 'REJEITADO', '23514');
 
+    -- Tabela com uma coluna chamada "t" (nome comum de apelido em SQL dinâmico)
+    CREATE TABLE bd2_demo.teste_coluna_t (id int PRIMARY KEY, t int, situacao text DEFAULT 'NOVO');
+    INSERT INTO bd2_demo.teste_coluna_t VALUES (1, 5, 'NOVO');
+
+    PERFORM pg_temp.caso('D13', 'registrar_binding em tabela com dados válidos e uma coluna chamada t',
+            'CALL bd2_meta.registrar_binding(''bd2_demo'', ''teste_coluna_t'', ''situacao'', ''PEDIDO_STATE'')', 'ACEITO');
+
+    CALL bd2_meta.remover_binding('bd2_demo', 'teste_coluna_t', 'situacao');
+    DROP TABLE bd2_demo.teste_coluna_t;
+
+    -- Renomeação da coluna e da tabela vinculadas
+    CREATE TABLE bd2_demo.teste_renomear (id int PRIMARY KEY, situacao text DEFAULT 'NOVO');
+    CALL bd2_meta.registrar_binding('bd2_demo', 'teste_renomear', 'situacao', 'PEDIDO_STATE');
+    ALTER TABLE bd2_demo.teste_renomear RENAME COLUMN situacao TO fase;
+
+    PERFORM pg_temp.caso('D14', 'renomear: INSERT depois de renomear a COLUNA vinculada (falha segura)',
+            'INSERT INTO bd2_demo.teste_renomear (id) VALUES (1)', 'REJEITADO', '55000');
+
+    PERFORM pg_temp.caso('D15', 'renomear: remover_binding com o nome ANTIGO da coluna',
+            'CALL bd2_meta.remover_binding(''bd2_demo'', ''teste_renomear'', ''situacao'')', 'ACEITO');
+
+    PERFORM pg_temp.verifica('D16', 'renomear: após D15, nenhum trigger do motor sobra na tabela',
+            NOT EXISTS (SELECT 1 FROM pg_trigger
+                         WHERE tgrelid = 'bd2_demo.teste_renomear'::regclass AND tgname LIKE 'zz\_fsm\_%'));
+
+    PERFORM pg_temp.caso('D17', 'renomear: registrar_binding com o nome NOVO da coluna',
+            'CALL bd2_meta.registrar_binding(''bd2_demo'', ''teste_renomear'', ''fase'', ''PEDIDO_STATE'')', 'ACEITO');
+
+    ALTER TABLE bd2_demo.teste_renomear RENAME TO teste_renomeada;
+
+    PERFORM pg_temp.caso('D18', 'renomear: INSERT depois de renomear a TABELA vinculada (falha segura)',
+            'INSERT INTO bd2_demo.teste_renomeada (id) VALUES (2)', 'REJEITADO', '55000');
+
+    PERFORM pg_temp.caso('D19', 'renomear: remover_binding com o nome ANTIGO da tabela',
+            'CALL bd2_meta.remover_binding(''bd2_demo'', ''teste_renomear'', ''fase'')', 'ACEITO');
+
+    PERFORM pg_temp.caso('D20', 'renomear: registrar_binding com o nome NOVO da tabela',
+            'CALL bd2_meta.registrar_binding(''bd2_demo'', ''teste_renomeada'', ''fase'', ''PEDIDO_STATE'')', 'ACEITO');
+
+    PERFORM pg_temp.verifica('D21', 'renomear: exatamente 1 trigger do motor na tabela (sem trigger duplicado)',
+            (SELECT count(*) FROM pg_trigger
+              WHERE tgrelid = 'bd2_demo.teste_renomeada'::regclass AND tgname LIKE 'zz\_fsm\_%') = 1);
+
+    PERFORM pg_temp.caso('D22', 'renomear: após refazer o vínculo, INSERT em NOVO é aceito',
+            'INSERT INTO bd2_demo.teste_renomeada (id) VALUES (3)', 'ACEITO');
+
+    PERFORM pg_temp.caso('D23', 'renomear: e a transição NOVO -> CONCLUIDO continua rejeitada',
+            'UPDATE bd2_demo.teste_renomeada SET fase = ''CONCLUIDO'' WHERE id = 3', 'REJEITADO', '23514');
+
+    -- limpeza das tabelas e vínculos de teste
+    CALL bd2_meta.remover_binding('bd2_demo', 'teste_renomeada', 'fase');
+    DROP TABLE bd2_demo.teste_renomeada;
+    DELETE FROM bd2_meta.state_binding
+     WHERE schema_name = 'bd2_demo' AND table_name IN ('teste_coluna_t', 'teste_renomear', 'teste_renomeada');
+
     -- =========================================================================
     -- E. Integridade da configuração do DTE
     -- =========================================================================
