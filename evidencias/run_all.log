@@ -1,0 +1,455 @@
+==================================================================
+1. Resetando banco (chinook_serial) e limpando roles do cluster
+==================================================================
+ pg_terminate_backend 
+----------------------
+(0 rows)
+
+DROP DATABASE
+DO
+==================================================================
+2. Carregando Chinook Database v1.4.5 (SerialPKs) -> chinook_serial
+==================================================================
+psql:sql/00_ambiente/Chinook_PostgreSql_SerialPKs.sql:19: NOTICE:  database "chinook_serial" does not exist, skipping
+==================================================================
+3. Verificando ambiente inicial (00_verificar_ambiente.sql)
+==================================================================
+CREATE SCHEMA
+CREATE SCHEMA
+psql:sql/00_ambiente/00_verificar_ambiente.sql:52: NOTICE:  Ambiente PostgreSQL: PostgreSQL 16.16 on x86_64-pc-linux-musl, compiled by gcc (Alpine 15.2.0) 15.2.0, 64-bit
+psql:sql/00_ambiente/00_verificar_ambiente.sql:52: NOTICE:  Verificação concluída com sucesso: 11 tabelas presentes e 0 divergências em invoice.total.
+DO
+==================================================================
+4. Instalando os módulos, executando os testes e gerando evidências
+==================================================================
+------------------------------------------------------------------
+Executando: sql/01_catalogos/01_listar_indices.sql
+CREATE FUNCTION
+CREATE VIEW
+------------------------------------------------------------------
+Executando: sql/01_catalogos/02_listar_foreign_keys.sql
+CREATE FUNCTION
+CREATE VIEW
+------------------------------------------------------------------
+Executando: sql/02_administracao/01_remover_indices.sql
+CREATE PROCEDURE
+REVOKE
+------------------------------------------------------------------
+Executando: sql/03_ddl_dinamico/01_gerar_create_table.sql
+CREATE FUNCTION
+------------------------------------------------------------------
+Executando: sql/04_maquina_estados/01_tabelas_configuracao.sql
+psql:sql/04_maquina_estados/01_tabelas_configuracao.sql:21: NOTICE:  schema "bd2_meta" already exists, skipping
+CREATE SCHEMA
+CREATE TABLE
+CREATE TABLE
+CREATE INDEX
+CREATE TABLE
+CREATE TABLE
+CREATE FUNCTION
+CREATE TRIGGER
+CREATE FUNCTION
+CREATE TRIGGER
+CREATE VIEW
+CREATE VIEW
+GRANT
+REVOKE
+GRANT
+------------------------------------------------------------------
+Executando: sql/04_maquina_estados/02_funcao_validacao.sql
+CREATE FUNCTION
+COMMENT
+------------------------------------------------------------------
+Executando: sql/04_maquina_estados/03_procedures_registro.sql
+CREATE FUNCTION
+CREATE PROCEDURE
+CREATE PROCEDURE
+CREATE PROCEDURE
+REVOKE
+REVOKE
+REVOKE
+------------------------------------------------------------------
+Executando: sql/04_maquina_estados/04_demo.sql
+ALTER TABLE
+CREATE TABLE
+INSERT 0 2
+INSERT 0 7
+INSERT 0 6
+psql:sql/04_maquina_estados/04_demo.sql:85: NOTICE:  trigger "zz_fsm_af06ab1336842d4bd27fa167" for relation "public.invoice" does not exist, skipping
+psql:sql/04_maquina_estados/04_demo.sql:85: NOTICE:  Binding registrado: public.invoice.status -> máquina "INVOICE_STATE" (trigger zz_fsm_af06ab1336842d4bd27fa167).
+CALL
+psql:sql/04_maquina_estados/04_demo.sql:86: NOTICE:  trigger "zz_fsm_ee13082de46496b8a53361a1" for relation "bd2_demo.pedido_demo" does not exist, skipping
+psql:sql/04_maquina_estados/04_demo.sql:86: NOTICE:  Binding registrado: bd2_demo.pedido_demo.situacao -> máquina "PEDIDO_STATE" (trigger zz_fsm_ee13082de46496b8a53361a1).
+CALL
+ machine_name  |  insert_policy  |  from_state  |   to_state   
+---------------+-----------------+--------------+--------------
+ INVOICE_STATE | INITIAL_ONLY    | PENDENTE     | CANCELADO
+ INVOICE_STATE | INITIAL_ONLY    | PENDENTE     | PAGO
+ PEDIDO_STATE  | ANY_VALID_STATE | EM_ANDAMENTO | CANCELADO
+ PEDIDO_STATE  | ANY_VALID_STATE | EM_ANDAMENTO | CONCLUIDO
+ PEDIDO_STATE  | ANY_VALID_STATE | NOVO         | CANCELADO
+ PEDIDO_STATE  | ANY_VALID_STATE | NOVO         | EM_ANDAMENTO
+(6 rows)
+
+ schema_name | table_name  | column_name | machine_name  | binding_ativo | trigger_instalado |          trigger_name           
+-------------+-------------+-------------+---------------+---------------+-------------------+---------------------------------
+ bd2_demo    | pedido_demo | situacao    | PEDIDO_STATE  | t             | t                 | zz_fsm_ee13082de46496b8a53361a1
+ public      | invoice     | status      | INVOICE_STATE | t             | t                 | zz_fsm_af06ab1336842d4bd27fa167
+(2 rows)
+
+------------------------------------------------------------------
+Executando: sql/05_regras_semanticas/00_roles_e_permissoes.sql
+DO
+ALTER ROLE
+ALTER ROLE
+ALTER ROLE
+COMMENT
+COMMENT
+REVOKE
+REVOKE
+GRANT
+GRANT
+GRANT
+GRANT
+------------------------------------------------------------------
+Executando: sql/05_regras_semanticas/01_trigger_hierarquia_employee.sql
+CREATE FUNCTION
+CREATE TRIGGER
+psql:sql/05_regras_semanticas/01_trigger_hierarquia_employee.sql:118: NOTICE:  R-TRG-01 instalado: hierarquia atual de employee é acíclica.
+DO
+------------------------------------------------------------------
+Executando: sql/05_regras_semanticas/02_integridade_invoice_total.sql
+DO
+CREATE FUNCTION
+CREATE TRIGGER
+CREATE FUNCTION
+CREATE TRIGGER
+CREATE FUNCTION
+CREATE TRIGGER
+CREATE VIEW
+------------------------------------------------------------------
+Executando: sql/05_regras_semanticas/03_procedure_criar_fatura.sql
+CREATE PROCEDURE
+ALTER PROCEDURE
+REVOKE
+GRANT
+COMMENT
+------------------------------------------------------------------
+Executando: sql/06_testes/01_testes_parte1_q1_a_q4.sql
+psql:sql/06_testes/01_testes_parte1_q1_a_q4.sql:89: NOTICE:  OK: Testes Q1 e Q3 passaram.
+DO
+psql:sql/06_testes/01_testes_parte1_q1_a_q4.sql:135: NOTICE:  Tabela bd2_demo.teste_rem_idx | Objeto: idx_teste_rem_valor | Ação: DROP INDEX | Resultado: REMOVIDO
+psql:sql/06_testes/01_testes_parte1_q1_a_q4.sql:135: NOTICE:  Tabela bd2_demo.teste_rem_idx | Objeto: teste_rem_idx_codigo_key | Ação: PRESERVAR CONSTRAINT (u) | Resultado: PRESERVADO
+psql:sql/06_testes/01_testes_parte1_q1_a_q4.sql:135: NOTICE:  Tabela bd2_demo.teste_rem_idx | Objeto: teste_rem_idx_pkey | Ação: PRESERVAR CONSTRAINT (p) | Resultado: PRESERVADO
+psql:sql/06_testes/01_testes_parte1_q1_a_q4.sql:135: NOTICE:  Tabela bd2_demo.teste_rem_idx | Objeto: teste_rem_idx_codigo_key | Ação: DROP CONSTRAINT (u) RESTRICT | Resultado: REMOVIDO
+psql:sql/06_testes/01_testes_parte1_q1_a_q4.sql:135: NOTICE:  Tabela bd2_demo.teste_rem_idx | Objeto: teste_rem_idx_pkey | Ação: DROP CONSTRAINT (p) RESTRICT | Resultado: REMOVIDO
+psql:sql/06_testes/01_testes_parte1_q1_a_q4.sql:135: NOTICE:  Tabela public.employee | Objeto: employee_reports_to_idx | Ação: DROP INDEX | Resultado: REMOVIDO
+psql:sql/06_testes/01_testes_parte1_q1_a_q4.sql:135: NOTICE:  OK: Testes Q2 passaram.
+DO
+psql:sql/06_testes/01_testes_parte1_q1_a_q4.sql:157: NOTICE:  Tabela bd2_demo.q2_pai | Objeto: q2_pai_nome_idx | Ação: DROP INDEX | Resultado: REMOVIDO
+psql:sql/06_testes/01_testes_parte1_q1_a_q4.sql:157: NOTICE:  drop cascades to constraint q2_filho_pai_id_fkey on table bd2_demo.q2_filho
+psql:sql/06_testes/01_testes_parte1_q1_a_q4.sql:157: NOTICE:  Tabela bd2_demo.q2_pai | Objeto: q2_pai_pkey | Ação: DROP CONSTRAINT (p) CASCADE | Resultado: REMOVIDO
+psql:sql/06_testes/01_testes_parte1_q1_a_q4.sql:157: NOTICE:  OK: Testes Q2 (CASCADE) passaram.
+DO
+psql:sql/06_testes/01_testes_parte1_q1_a_q4.sql:205: NOTICE:  drop cascades to 11 other objects
+DETAIL:  drop cascades to table chinook_clone.album
+drop cascades to table chinook_clone.artist
+drop cascades to table chinook_clone.customer
+drop cascades to table chinook_clone.employee
+drop cascades to table chinook_clone.genre
+drop cascades to table chinook_clone.invoice
+drop cascades to table chinook_clone.invoice_line
+drop cascades to table chinook_clone.media_type
+drop cascades to table chinook_clone.playlist
+drop cascades to table chinook_clone.playlist_track
+drop cascades to table chinook_clone.track
+psql:sql/06_testes/01_testes_parte1_q1_a_q4.sql:205: NOTICE:  OK: Testes Q4 passaram.
+DO
+------------------------------------------------------------------
+Executando: sql/06_testes/02_testes_maquina_estados.sql
+psql:sql/06_testes/02_testes_maquina_estados.sql:234: NOTICE:  [OK] A01 | invoice: INSERT sem informar status (DEFAULT PENDENTE = inicial) | esperado: ACEITO | obtido: ACEITO 
+psql:sql/06_testes/02_testes_maquina_estados.sql:234: NOTICE:  [OK] A02 | invoice: INSERT com status PAGO (não inicial, política INITIAL_ONLY) | esperado: REJEITADO | obtido: REJEITADO  — DTE [public.invoice.status / máquina INVOICE_STATE]: uma nova linha deve nascer no estado inicial; "PAGO" não é inicial.
+psql:sql/06_testes/02_testes_maquina_estados.sql:234: NOTICE:  [OK] A03 | invoice: INSERT com status inexistente ESTORNADO | esperado: REJEITADO | obtido: REJEITADO  — DTE [public.invoice.status / máquina INVOICE_STATE]: estado "ESTORNADO" não existe.
+psql:sql/06_testes/02_testes_maquina_estados.sql:234: NOTICE:  [OK] A04 | invoice: PENDENTE -> PAGO | esperado: ACEITO | obtido: ACEITO 
+psql:sql/06_testes/02_testes_maquina_estados.sql:234: NOTICE:  [OK] A05 | invoice: PAGO -> PENDENTE (PAGO é terminal) | esperado: REJEITADO | obtido: REJEITADO  — DTE [public.invoice.status / máquina INVOICE_STATE]: "PAGO" é estado terminal; nenhuma transição é permitida (tentativa: "PAGO" -> "PENDENTE").
+psql:sql/06_testes/02_testes_maquina_estados.sql:234: NOTICE:  [OK] A06 | invoice: UPDATE de outra coluna (billing_city) numa fatura PAGO | esperado: ACEITO | obtido: ACEITO 
+psql:sql/06_testes/02_testes_maquina_estados.sql:234: NOTICE:  [OK] A07 | invoice: UPDATE status PAGO -> PAGO (sem mudança de estado) | esperado: ACEITO | obtido: ACEITO 
+psql:sql/06_testes/02_testes_maquina_estados.sql:234: NOTICE:  [OK] A08 | invoice: INSERT de segunda fatura (PENDENTE) | esperado: ACEITO | obtido: ACEITO 
+psql:sql/06_testes/02_testes_maquina_estados.sql:234: NOTICE:  [OK] A09 | invoice: PENDENTE -> CANCELADO | esperado: ACEITO | obtido: ACEITO 
+psql:sql/06_testes/02_testes_maquina_estados.sql:234: NOTICE:  [OK] A10 | invoice: CANCELADO -> PAGO (CANCELADO é terminal) | esperado: REJEITADO | obtido: REJEITADO  — DTE [public.invoice.status / máquina INVOICE_STATE]: "CANCELADO" é estado terminal; nenhuma transição é permitida (tentativa: "CANCELADO" -> "PAGO").
+psql:sql/06_testes/02_testes_maquina_estados.sql:234: NOTICE:  [OK] A11 | invoice: status em minúsculas ('pago') — códigos são exatos | esperado: REJEITADO | obtido: REJEITADO  — DTE [public.invoice.status / máquina INVOICE_STATE]: estado "pago" não existe.
+psql:sql/06_testes/02_testes_maquina_estados.sql:234: NOTICE:  [OK] B01 | pedido: INSERT sem informar situacao (DEFAULT NOVO) | esperado: ACEITO | obtido: ACEITO 
+psql:sql/06_testes/02_testes_maquina_estados.sql:234: NOTICE:  [OK] B02 | pedido: INSERT direto em CONCLUIDO (política ANY_VALID_STATE permite) | esperado: ACEITO | obtido: ACEITO 
+psql:sql/06_testes/02_testes_maquina_estados.sql:234: NOTICE:  [OK] B03 | pedido: INSERT com situacao NULL (coluna anulável; rejeitado pelo motor) | esperado: REJEITADO | obtido: REJEITADO  — DTE [bd2_demo.pedido_demo.situacao / máquina PEDIDO_STATE]: o estado não pode ser nulo.
+psql:sql/06_testes/02_testes_maquina_estados.sql:234: NOTICE:  [OK] B04 | pedido: INSERT com PAGO (estado de OUTRA máquina) | esperado: REJEITADO | obtido: REJEITADO  — DTE [bd2_demo.pedido_demo.situacao / máquina PEDIDO_STATE]: estado "PAGO" não existe.
+psql:sql/06_testes/02_testes_maquina_estados.sql:234: NOTICE:  [OK] B05 | pedido: NOVO -> CONCLUIDO (pula EM_ANDAMENTO; sem aresta) | esperado: REJEITADO | obtido: REJEITADO  — DTE [bd2_demo.pedido_demo.situacao / máquina PEDIDO_STATE]: transição "NOVO" -> "CONCLUIDO" não é permitida pelo diagrama.
+psql:sql/06_testes/02_testes_maquina_estados.sql:234: NOTICE:  [OK] B06 | pedido: NOVO -> EM_ANDAMENTO | esperado: ACEITO | obtido: ACEITO 
+psql:sql/06_testes/02_testes_maquina_estados.sql:234: NOTICE:  [OK] B07 | pedido: EM_ANDAMENTO -> NULL | esperado: REJEITADO | obtido: REJEITADO  — DTE [bd2_demo.pedido_demo.situacao / máquina PEDIDO_STATE]: o estado não pode ser nulo.
+psql:sql/06_testes/02_testes_maquina_estados.sql:234: NOTICE:  [OK] B08 | pedido: EM_ANDAMENTO -> CONCLUIDO | esperado: ACEITO | obtido: ACEITO 
+psql:sql/06_testes/02_testes_maquina_estados.sql:234: NOTICE:  [OK] B09 | pedido: INSERT de terceiro pedido (NOVO) | esperado: ACEITO | obtido: ACEITO 
+psql:sql/06_testes/02_testes_maquina_estados.sql:234: NOTICE:  [OK] B10 | pedido: UPDATE em lote -> EM_ANDAMENTO (uma linha NOVO válida + uma CONCLUIDO inválida) | esperado: REJEITADO | obtido: REJEITADO  — DTE [bd2_demo.pedido_demo.situacao / máquina PEDIDO_STATE]: "CONCLUIDO" é estado terminal; nenhuma transição é permitida (tentativa: "CONCLUIDO" -> "EM_ANDAMENTO").
+psql:sql/06_testes/02_testes_maquina_estados.sql:234: NOTICE:  [OK] B11 | pedido: após B10, a linha válida continua NOVO (atomicidade do comando)
+psql:sql/06_testes/02_testes_maquina_estados.sql:234: NOTICE:  [OK] C01 | pedido: NOVO -> EM_ANDAMENTO com o estado EM_ANDAMENTO desativado | esperado: REJEITADO | obtido: REJEITADO  — DTE [bd2_demo.pedido_demo.situacao / máquina PEDIDO_STATE]: estado "EM_ANDAMENTO" está inativo.
+psql:sql/06_testes/02_testes_maquina_estados.sql:234: NOTICE:  [OK] C02 | pedido: INSERT com binding INATIVO (trigger ainda instalado) — falha segura | esperado: REJEITADO | obtido: REJEITADO  — DTE [bd2_demo.pedido_demo.situacao]: não há binding ativo (ou a máquina está inativa) para esta coluna; operação rejeitada (falha segura).
+psql:sql/06_testes/02_testes_maquina_estados.sql:234: NOTICE:  [OK] C03 | pedido: INSERT com a MÁQUINA inativa — falha segura | esperado: REJEITADO | obtido: REJEITADO  — DTE [bd2_demo.pedido_demo.situacao]: não há binding ativo (ou a máquina está inativa) para esta coluna; operação rejeitada (falha segura).
+psql:sql/06_testes/02_testes_maquina_estados.sql:234: NOTICE:  [OK] C04 | pedido: INSERT após reativar binding e máquina | esperado: ACEITO | obtido: ACEITO 
+psql:sql/06_testes/02_testes_maquina_estados.sql:234: NOTICE:  Binding registrado: bd2_demo.pedido_demo.situacao -> máquina "PEDIDO_STATE" (trigger zz_fsm_ee13082de46496b8a53361a1).
+psql:sql/06_testes/02_testes_maquina_estados.sql:234: NOTICE:  [OK] D01 | registrar_binding de novo na MESMA coluna (idempotência: não duplica binding nem trigger) | esperado: ACEITO | obtido: ACEITO 
+psql:sql/06_testes/02_testes_maquina_estados.sql:234: NOTICE:  [OK] D02 | após D01: exatamente 1 binding e 1 trigger zz_fsm_ em pedido_demo
+psql:sql/06_testes/02_testes_maquina_estados.sql:234: NOTICE:  [OK] D03 | registrar_binding em tabela inexistente | esperado: REJEITADO | obtido: REJEITADO  — registrar_binding: tabela bd2_demo.nao_existe não encontrada.
+psql:sql/06_testes/02_testes_maquina_estados.sql:234: NOTICE:  [OK] D04 | registrar_binding em coluna inexistente | esperado: REJEITADO | obtido: REJEITADO  — registrar_binding: coluna "nao_existe" não existe em bd2_demo.pedido_demo.
+psql:sql/06_testes/02_testes_maquina_estados.sql:234: NOTICE:  [OK] D05 | registrar_binding em coluna de tipo não suportado (timestamp) | esperado: REJEITADO | obtido: REJEITADO  — registrar_binding: tipo "timestamp without time zone" da coluna public.invoice.invoice_date não é suportado (use text, varchar, enum ou inteiro).
+psql:sql/06_testes/02_testes_maquina_estados.sql:234: NOTICE:  [OK] D06 | registrar_binding com máquina inexistente | esperado: REJEITADO | obtido: REJEITADO  — registrar_binding: máquina "NAO_EXISTE" não existe.
+psql:sql/06_testes/02_testes_maquina_estados.sql:234: NOTICE:  Binding removido: bd2_demo.pedido_demo.situacao (trigger zz_fsm_ee13082de46496b8a53361a1 excluído, binding desativado).
+psql:sql/06_testes/02_testes_maquina_estados.sql:234: NOTICE:  [OK] D07 | remover_binding de pedido_demo.situacao | esperado: ACEITO | obtido: ACEITO 
+psql:sql/06_testes/02_testes_maquina_estados.sql:234: NOTICE:  [OK] D08 | após D07: trigger removido e binding desativado (sem trigger órfão)
+psql:sql/06_testes/02_testes_maquina_estados.sql:234: NOTICE:  [OK] D09 | pedido: sem binding, valor fora do DTE (QUALQUER) não é validado | esperado: ACEITO | obtido: ACEITO 
+psql:sql/06_testes/02_testes_maquina_estados.sql:234: NOTICE:  [OK] D10 | registrar_binding com dados existentes inválidos (linha QUALQUER) | esperado: REJEITADO | obtido: REJEITADO  — registrar_binding: 1 linha(s) de bd2_demo.pedido_demo possuem "situacao" nulo ou fora dos estados ativos da máquina "PEDIDO_STATE".
+psql:sql/06_testes/02_testes_maquina_estados.sql:234: NOTICE:  trigger "zz_fsm_ee13082de46496b8a53361a1" for relation "bd2_demo.pedido_demo" does not exist, skipping
+psql:sql/06_testes/02_testes_maquina_estados.sql:234: NOTICE:  Binding registrado: bd2_demo.pedido_demo.situacao -> máquina "PEDIDO_STATE" (trigger zz_fsm_ee13082de46496b8a53361a1).
+psql:sql/06_testes/02_testes_maquina_estados.sql:234: NOTICE:  [OK] D11 | registrar_binding após corrigir os dados | esperado: ACEITO | obtido: ACEITO 
+psql:sql/06_testes/02_testes_maquina_estados.sql:234: NOTICE:  [OK] D12 | pedido: após re-registro, NOVO -> CONCLUIDO volta a ser rejeitado | esperado: REJEITADO | obtido: REJEITADO  — DTE [bd2_demo.pedido_demo.situacao / máquina PEDIDO_STATE]: transição "NOVO" -> "CONCLUIDO" não é permitida pelo diagrama.
+psql:sql/06_testes/02_testes_maquina_estados.sql:234: NOTICE:  [OK] E01 | config: transição saindo de estado terminal (CONCLUIDO -> NOVO) | esperado: REJEITADO | obtido: REJEITADO  — DTE inválido: o estado terminal "CONCLUIDO" não pode ter transição de saída (-> "NOVO").
+psql:sql/06_testes/02_testes_maquina_estados.sql:234: NOTICE:  [OK] E02 | config: marcar como terminal um estado com saídas (EM_ANDAMENTO) | esperado: REJEITADO | obtido: REJEITADO  — DTE inválido: o estado "EM_ANDAMENTO" possui transições de saída e não pode ser marcado como terminal.
+psql:sql/06_testes/02_testes_maquina_estados.sql:234: NOTICE:  [OK] E03 | config: segundo estado inicial na mesma máquina | esperado: REJEITADO | obtido: REJEITADO  — duplicate key value violates unique constraint "state_definition_um_inicial_uidx"
+psql:sql/06_testes/02_testes_maquina_estados.sql:234: NOTICE:  [OK] E04 | config: transição para estado não cadastrado | esperado: REJEITADO | obtido: REJEITADO  — insert or update on table "state_transition" violates foreign key constraint "state_transition_machine_id_to_state_fkey"
+psql:sql/06_testes/02_testes_maquina_estados.sql:234: NOTICE:  [OK] F01 | os triggers das 2 tabelas usam a MESMA função (mesmo OID)
+psql:sql/06_testes/02_testes_maquina_estados.sql:234: NOTICE:  [OK] F02 | o código da função não contém nomes de tabela, coluna ou estado da demo
+ caso |                                         operacao                                          |     esperado      |      obtido       | resultado 
+------+-------------------------------------------------------------------------------------------+-------------------+-------------------+-----------
+ A01  | invoice: INSERT sem informar status (DEFAULT PENDENTE = inicial)                          | ACEITO            | ACEITO            | OK
+ A02  | invoice: INSERT com status PAGO (não inicial, política INITIAL_ONLY)                      | REJEITADO (23514) | REJEITADO (23514) | OK
+ A03  | invoice: INSERT com status inexistente ESTORNADO                                          | REJEITADO (23514) | REJEITADO (23514) | OK
+ A04  | invoice: PENDENTE -> PAGO                                                                 | ACEITO            | ACEITO            | OK
+ A05  | invoice: PAGO -> PENDENTE (PAGO é terminal)                                               | REJEITADO (23514) | REJEITADO (23514) | OK
+ A06  | invoice: UPDATE de outra coluna (billing_city) numa fatura PAGO                           | ACEITO            | ACEITO            | OK
+ A07  | invoice: UPDATE status PAGO -> PAGO (sem mudança de estado)                               | ACEITO            | ACEITO            | OK
+ A08  | invoice: INSERT de segunda fatura (PENDENTE)                                              | ACEITO            | ACEITO            | OK
+ A09  | invoice: PENDENTE -> CANCELADO                                                            | ACEITO            | ACEITO            | OK
+ A10  | invoice: CANCELADO -> PAGO (CANCELADO é terminal)                                         | REJEITADO (23514) | REJEITADO (23514) | OK
+ A11  | invoice: status em minúsculas ('pago') — códigos são exatos                               | REJEITADO (23514) | REJEITADO (23514) | OK
+ B01  | pedido: INSERT sem informar situacao (DEFAULT NOVO)                                       | ACEITO            | ACEITO            | OK
+ B02  | pedido: INSERT direto em CONCLUIDO (política ANY_VALID_STATE permite)                     | ACEITO            | ACEITO            | OK
+ B03  | pedido: INSERT com situacao NULL (coluna anulável; rejeitado pelo motor)                  | REJEITADO (23514) | REJEITADO (23514) | OK
+ B04  | pedido: INSERT com PAGO (estado de OUTRA máquina)                                         | REJEITADO (23514) | REJEITADO (23514) | OK
+ B05  | pedido: NOVO -> CONCLUIDO (pula EM_ANDAMENTO; sem aresta)                                 | REJEITADO (23514) | REJEITADO (23514) | OK
+ B06  | pedido: NOVO -> EM_ANDAMENTO                                                              | ACEITO            | ACEITO            | OK
+ B07  | pedido: EM_ANDAMENTO -> NULL                                                              | REJEITADO (23514) | REJEITADO (23514) | OK
+ B08  | pedido: EM_ANDAMENTO -> CONCLUIDO                                                         | ACEITO            | ACEITO            | OK
+ B09  | pedido: INSERT de terceiro pedido (NOVO)                                                  | ACEITO            | ACEITO            | OK
+ B10  | pedido: UPDATE em lote -> EM_ANDAMENTO (uma linha NOVO válida + uma CONCLUIDO inválida)   | REJEITADO (23514) | REJEITADO (23514) | OK
+ B11  | pedido: após B10, a linha válida continua NOVO (atomicidade do comando)                   | VERDADEIRO        | VERDADEIRO        | OK
+ C01  | pedido: NOVO -> EM_ANDAMENTO com o estado EM_ANDAMENTO desativado                         | REJEITADO (23514) | REJEITADO (23514) | OK
+ C02  | pedido: INSERT com binding INATIVO (trigger ainda instalado) — falha segura               | REJEITADO (55000) | REJEITADO (55000) | OK
+ C03  | pedido: INSERT com a MÁQUINA inativa — falha segura                                       | REJEITADO (55000) | REJEITADO (55000) | OK
+ C04  | pedido: INSERT após reativar binding e máquina                                            | ACEITO            | ACEITO            | OK
+ D01  | registrar_binding de novo na MESMA coluna (idempotência: não duplica binding nem trigger) | ACEITO            | ACEITO            | OK
+ D02  | após D01: exatamente 1 binding e 1 trigger zz_fsm_ em pedido_demo                         | VERDADEIRO        | VERDADEIRO        | OK
+ D03  | registrar_binding em tabela inexistente                                                   | REJEITADO (42P01) | REJEITADO (42P01) | OK
+ D04  | registrar_binding em coluna inexistente                                                   | REJEITADO (42703) | REJEITADO (42703) | OK
+ D05  | registrar_binding em coluna de tipo não suportado (timestamp)                             | REJEITADO (22023) | REJEITADO (22023) | OK
+ D06  | registrar_binding com máquina inexistente                                                 | REJEITADO (22023) | REJEITADO (22023) | OK
+ D07  | remover_binding de pedido_demo.situacao                                                   | ACEITO            | ACEITO            | OK
+ D08  | após D07: trigger removido e binding desativado (sem trigger órfão)                       | VERDADEIRO        | VERDADEIRO        | OK
+ D09  | pedido: sem binding, valor fora do DTE (QUALQUER) não é validado                          | ACEITO            | ACEITO            | OK
+ D10  | registrar_binding com dados existentes inválidos (linha QUALQUER)                         | REJEITADO (23514) | REJEITADO (23514) | OK
+ D11  | registrar_binding após corrigir os dados                                                  | ACEITO            | ACEITO            | OK
+ D12  | pedido: após re-registro, NOVO -> CONCLUIDO volta a ser rejeitado                         | REJEITADO (23514) | REJEITADO (23514) | OK
+ E01  | config: transição saindo de estado terminal (CONCLUIDO -> NOVO)                           | REJEITADO (23514) | REJEITADO (23514) | OK
+ E02  | config: marcar como terminal um estado com saídas (EM_ANDAMENTO)                          | REJEITADO (23514) | REJEITADO (23514) | OK
+ E03  | config: segundo estado inicial na mesma máquina                                           | REJEITADO (23505) | REJEITADO (23505) | OK
+ E04  | config: transição para estado não cadastrado                                              | REJEITADO (23503) | REJEITADO (23503) | OK
+ F01  | os triggers das 2 tabelas usam a MESMA função (mesmo OID)                                 | VERDADEIRO        | VERDADEIRO        | OK
+ F02  | o código da função não contém nomes de tabela, coluna ou estado da demo                   | VERDADEIRO        | VERDADEIRO        | OK
+(44 rows)
+
+psql:sql/06_testes/lib/resumo.sql:37: NOTICE:  OK: Testes Q5 (DTE) passaram — 44 casos.
+DO
+------------------------------------------------------------------
+Executando: sql/06_testes/03_testes_regras_semanticas.sql
+psql:sql/06_testes/03_testes_regras_semanticas.sql:86: NOTICE:  [OK] H01 | employee: INSERT raiz (reports_to NULL) | esperado: ACEITO | obtido: ACEITO 
+psql:sql/06_testes/03_testes_regras_semanticas.sql:86: NOTICE:  [OK] H02 | employee: INSERT e2 subordinado a e1 | esperado: ACEITO | obtido: ACEITO 
+psql:sql/06_testes/03_testes_regras_semanticas.sql:86: NOTICE:  [OK] H03 | employee: INSERT e3 subordinado a e2 | esperado: ACEITO | obtido: ACEITO 
+psql:sql/06_testes/03_testes_regras_semanticas.sql:86: NOTICE:  [OK] H04 | employee: INSERT e4 (outra raiz) | esperado: ACEITO | obtido: ACEITO 
+psql:sql/06_testes/03_testes_regras_semanticas.sql:86: NOTICE:  [OK] H05 | employee: auto-referência (e2 superior de si mesmo) | esperado: REJEITADO | obtido: REJEITADO  — R-TRG-01: o funcionário 10 não pode ser superior de si mesmo.
+psql:sql/06_testes/03_testes_regras_semanticas.sql:86: NOTICE:  [OK] H06 | employee: ciclo de 2 (e1 passa a reportar a e2; e2 já reporta a e1) | esperado: REJEITADO | obtido: REJEITADO  — R-TRG-01: definir 10 como superior de 9 criaria um ciclo na hierarquia (cadeia: 10 -> 9).
+psql:sql/06_testes/03_testes_regras_semanticas.sql:86: NOTICE:  [OK] H07 | employee: ciclo de 3 (e1 -> e3 -> e2 -> e1) | esperado: REJEITADO | obtido: REJEITADO  — R-TRG-01: definir 11 como superior de 9 criaria um ciclo na hierarquia (cadeia: 11 -> 10 -> 9).
+psql:sql/06_testes/03_testes_regras_semanticas.sql:86: NOTICE:  [OK] H08 | employee: ciclo em UPDATE de várias linhas no mesmo comando (e1 <-> e4) | esperado: REJEITADO | obtido: REJEITADO  — R-TRG-01: definir 9 como superior de 12 criaria um ciclo na hierarquia (cadeia: 9 -> 12).
+psql:sql/06_testes/03_testes_regras_semanticas.sql:86: NOTICE:  [OK] H09 | employee: ciclo em INSERT de 2 linhas no mesmo comando (a -> b, b -> a) | esperado: REJEITADO | obtido: REJEITADO  — R-TRG-01: definir 13 como superior de 14 criaria um ciclo na hierarquia (cadeia: 13).
+psql:sql/06_testes/03_testes_regras_semanticas.sql:86: NOTICE:  [OK] H10 | employee: mudança válida (e3 passa a reportar direto a e1) | esperado: ACEITO | obtido: ACEITO 
+psql:sql/06_testes/03_testes_regras_semanticas.sql:86: NOTICE:  [OK] H11 | employee: mudança válida (e1 passa a reportar a e4; sem ciclo) | esperado: ACEITO | obtido: ACEITO 
+psql:sql/06_testes/03_testes_regras_semanticas.sql:86: NOTICE:  [OK] H12 | employee: agora e4 -> e3 fecharia e4 -> e3 -> e1 -> e4 | esperado: REJEITADO | obtido: REJEITADO  — R-TRG-01: definir 11 como superior de 12 criaria um ciclo na hierarquia (cadeia: 11 -> 9 -> 12).
+psql:sql/06_testes/03_testes_regras_semanticas.sql:86: NOTICE:  [OK] H13 | employee: UPDATE de outra coluna (phone) não é afetado | esperado: ACEITO | obtido: ACEITO 
+psql:sql/06_testes/03_testes_regras_semanticas.sql:86: NOTICE:  [OK] H14 | employee: tornar e1 raiz novamente (reports_to NULL) | esperado: ACEITO | obtido: ACEITO 
+psql:sql/06_testes/03_testes_regras_semanticas.sql:86: NOTICE:  [OK] H15 | employee: hierarquia do seed — General Manager passa a reportar a um subordinado indireto | esperado: REJEITADO | obtido: REJEITADO  — R-TRG-01: definir 8 como superior de 1 criaria um ciclo na hierarquia (cadeia: 8 -> 6 -> 1).
+psql:sql/06_testes/03_testes_regras_semanticas.sql:86: NOTICE:  [OK] H16 | employee: hierarquia final acíclica (nenhum funcionário alcança a si mesmo)
+psql:sql/06_testes/03_testes_regras_semanticas.sql:199: NOTICE:  [OK] T01 | invoice: INSERT informando total = 999.99 sem itens | esperado: ACEITO | obtido: ACEITO 
+psql:sql/06_testes/03_testes_regras_semanticas.sql:199: NOTICE:  [OK] T01b | total da fatura sem itens = 0.00 (valor informado foi ignorado)
+psql:sql/06_testes/03_testes_regras_semanticas.sql:199: NOTICE:  [OK] T02 | invoice_line: INSERT 1 item (qtd 2) | esperado: ACEITO | obtido: ACEITO 
+psql:sql/06_testes/03_testes_regras_semanticas.sql:199: NOTICE:  [OK] T02b | total = 0.99 × 2
+psql:sql/06_testes/03_testes_regras_semanticas.sql:199: NOTICE:  [OK] T03 | invoice_line: INSERT 2º item (qtd 1) | esperado: ACEITO | obtido: ACEITO 
+psql:sql/06_testes/03_testes_regras_semanticas.sql:199: NOTICE:  [OK] T03b | total = soma dos 2 itens
+psql:sql/06_testes/03_testes_regras_semanticas.sql:199: NOTICE:  [OK] T04 | invoice_line: UPDATE quantity 2 -> 5 | esperado: ACEITO | obtido: ACEITO 
+psql:sql/06_testes/03_testes_regras_semanticas.sql:199: NOTICE:  [OK] T04b | total recalculado após mudar quantidade
+psql:sql/06_testes/03_testes_regras_semanticas.sql:199: NOTICE:  [OK] T05 | invoice_line: UPDATE unit_price -> 10.00 | esperado: ACEITO | obtido: ACEITO 
+psql:sql/06_testes/03_testes_regras_semanticas.sql:199: NOTICE:  [OK] T05b | total recalculado após mudar preço
+psql:sql/06_testes/03_testes_regras_semanticas.sql:199: NOTICE:  [OK] T09 | invoice: UPDATE direto total = 0.01 (adulteração) | esperado: ACEITO | obtido: ACEITO 
+psql:sql/06_testes/03_testes_regras_semanticas.sql:199: NOTICE:  [OK] T09b | total voltou ao valor calculado (trigger A)
+psql:sql/06_testes/03_testes_regras_semanticas.sql:199: NOTICE:  [OK] T08a | invoice: INSERT segunda fatura (vazia) | esperado: ACEITO | obtido: ACEITO 
+psql:sql/06_testes/03_testes_regras_semanticas.sql:199: NOTICE:  [OK] T08 | invoice_line: mover item (preço 10.00) da fatura 1 para a fatura 2 | esperado: ACEITO | obtido: ACEITO 
+psql:sql/06_testes/03_testes_regras_semanticas.sql:199: NOTICE:  [OK] T08b | fatura de origem diminuiu E fatura de destino aumentou
+psql:sql/06_testes/03_testes_regras_semanticas.sql:199: NOTICE:  [OK] T06 | invoice_line: DELETE do item da fatura 1 | esperado: ACEITO | obtido: ACEITO 
+psql:sql/06_testes/03_testes_regras_semanticas.sql:199: NOTICE:  [OK] T07 | DELETE do último item -> total = 0.00
+psql:sql/06_testes/03_testes_regras_semanticas.sql:199: NOTICE:  [OK] T10 | invoice_line: INSERT ... SELECT de 50 itens em um comando | esperado: ACEITO | obtido: ACEITO 
+psql:sql/06_testes/03_testes_regras_semanticas.sql:199: NOTICE:  [OK] T10b | total = soma dos 50 itens
+psql:sql/06_testes/03_testes_regras_semanticas.sql:199: NOTICE:  [OK] T12 | invoice_line: INSERT ... ON CONFLICT (invoice_line_id) DO UPDATE SET quantity = 7 | esperado: ACEITO | obtido: ACEITO 
+psql:sql/06_testes/03_testes_regras_semanticas.sql:199: NOTICE:  [OK] T12b | total correto após upsert
+psql:sql/06_testes/03_testes_regras_semanticas.sql:199: NOTICE:  [OK] T13 | TRUNCATE invoice_line -> todas as faturas com total = 0 (trigger de statement)
+psql:sql/06_testes/03_testes_regras_semanticas.sql:199: NOTICE:  [OK] T13b | após desfazer o TRUNCATE, os itens do seed continuam lá
+psql:sql/06_testes/03_testes_regras_semanticas.sql:199: NOTICE:  [OK] T14 | auditoria global: 0 faturas com total divergente
+psql:sql/06_testes/03_testes_regras_semanticas.sql:283: NOTICE:  [OK] S01 | bd2_app: CALL com 2 itens válidos | esperado: ACEITO | obtido: ACEITO 
+psql:sql/06_testes/03_testes_regras_semanticas.sql:283: NOTICE:  [OK] S02 | fatura criada com 2 itens e total = Σ(preço oficial da faixa × qtd)
+psql:sql/06_testes/03_testes_regras_semanticas.sql:283: NOTICE:  [OK] S03 | cobrança copiada do cliente e status inicial do DTE (PENDENTE)
+psql:sql/06_testes/03_testes_regras_semanticas.sql:283: NOTICE:  [OK] S04 | bd2_app: CALL com lista vazia [] | esperado: REJEITADO | obtido: REJEITADO  — R-SP-01: a fatura deve ter pelo menos 1 item (informe um array JSON não vazio).
+psql:sql/06_testes/03_testes_regras_semanticas.sql:283: NOTICE:  [OK] S05 | bd2_app: CALL com itens NULL | esperado: REJEITADO | obtido: REJEITADO  — R-SP-01: a fatura deve ter pelo menos 1 item (informe um array JSON não vazio).
+psql:sql/06_testes/03_testes_regras_semanticas.sql:283: NOTICE:  [OK] S06 | bd2_app: CALL com objeto em vez de array | esperado: REJEITADO | obtido: REJEITADO  — R-SP-01: a fatura deve ter pelo menos 1 item (informe um array JSON não vazio).
+psql:sql/06_testes/03_testes_regras_semanticas.sql:283: NOTICE:  [OK] S07 | bd2_app: CALL com cliente inexistente | esperado: REJEITADO | obtido: REJEITADO  — R-SP-01: o cliente -1 não existe.
+psql:sql/06_testes/03_testes_regras_semanticas.sql:283: NOTICE:  [OK] S08 | bd2_app: CALL com 1 item válido + 1 faixa inexistente | esperado: REJEITADO | obtido: REJEITADO  — R-SP-01: item 2: a faixa 4503 não existe.
+psql:sql/06_testes/03_testes_regras_semanticas.sql:283: NOTICE:  [OK] S09 | bd2_app: CALL com quantidade 0 | esperado: REJEITADO | obtido: REJEITADO  — R-SP-01: item 1: a quantidade deve ser maior que zero (recebido: 0).
+psql:sql/06_testes/03_testes_regras_semanticas.sql:283: NOTICE:  [OK] S10 | bd2_app: CALL com quantidade negativa | esperado: REJEITADO | obtido: REJEITADO  — R-SP-01: item 1: a quantidade deve ser maior que zero (recebido: -3).
+psql:sql/06_testes/03_testes_regras_semanticas.sql:283: NOTICE:  [OK] S11 | bd2_app: CALL com quantidade não inteira (1.5) | esperado: REJEITADO | obtido: REJEITADO  — R-SP-01: item 1 inválido: {"quantity": 1.5, "track_id": 1}. Formato esperado: {"track_id": <inteiro>, "quantity": <inteiro>}.
+psql:sql/06_testes/03_testes_regras_semanticas.sql:283: NOTICE:  [OK] S12 | bd2_app: CALL com item sem track_id | esperado: REJEITADO | obtido: REJEITADO  — R-SP-01: item 1 inválido: {"quantity": 1}. Formato esperado: {"track_id": <inteiro>, "quantity": <inteiro>}.
+psql:sql/06_testes/03_testes_regras_semanticas.sql:283: NOTICE:  [OK] S13 | bd2_app: CALL com quantidade em texto ("2") | esperado: REJEITADO | obtido: REJEITADO  — R-SP-01: item 1 inválido: {"quantity": "2", "track_id": 1}. Formato esperado: {"track_id": <inteiro>, "quantity": <inteiro>}.
+psql:sql/06_testes/03_testes_regras_semanticas.sql:283: NOTICE:  [OK] S14 | casos rejeitados não deixaram fatura gravada (só a do S01 foi criada)
+psql:sql/06_testes/03_testes_regras_semanticas.sql:283: NOTICE:  [OK] S15 | bd2_app: INSERT direto em invoice | esperado: REJEITADO | obtido: REJEITADO  — permission denied for table invoice
+psql:sql/06_testes/03_testes_regras_semanticas.sql:283: NOTICE:  [OK] S16 | bd2_app: INSERT direto em invoice_line | esperado: REJEITADO | obtido: REJEITADO  — permission denied for table invoice_line
+psql:sql/06_testes/03_testes_regras_semanticas.sql:283: NOTICE:  [OK] S17 | bd2_app: UPDATE direto em invoice_line | esperado: REJEITADO | obtido: REJEITADO  — permission denied for table invoice_line
+psql:sql/06_testes/03_testes_regras_semanticas.sql:283: NOTICE:  [OK] S18 | bd2_app: DELETE direto em invoice_line (deixaria fatura sem itens) | esperado: REJEITADO | obtido: REJEITADO  — permission denied for table invoice_line
+psql:sql/06_testes/03_testes_regras_semanticas.sql:283: NOTICE:  [OK] S19 | bd2_app: DELETE direto em invoice | esperado: REJEITADO | obtido: REJEITADO  — permission denied for table invoice
+psql:sql/06_testes/03_testes_regras_semanticas.sql:283: NOTICE:  [OK] S20 | bd2_app: TRUNCATE invoice_line | esperado: REJEITADO | obtido: REJEITADO  — permission denied for table invoice_line
+psql:sql/06_testes/03_testes_regras_semanticas.sql:283: NOTICE:  [OK] S21 | bd2_app: SELECT direto em invoice (sem acesso aos dados fora da procedure) | esperado: REJEITADO | obtido: REJEITADO  — permission denied for table invoice
+psql:sql/06_testes/03_testes_regras_semanticas.sql:283: NOTICE:  [OK] S22 | bd2_app: CALL de outra procedure (bd2_meta.remover_binding) | esperado: REJEITADO | obtido: REJEITADO  — permission denied for procedure remover_binding
+psql:sql/06_testes/03_testes_regras_semanticas.sql:323: NOTICE:  [OK] P01 | bd2_owner: NOLOGIN e não superusuário; bd2_app: LOGIN e não superusuário
+psql:sql/06_testes/03_testes_regras_semanticas.sql:323: NOTICE:  [OK] P02 | procedure: SECURITY DEFINER, dono bd2_owner, search_path fixo
+psql:sql/06_testes/03_testes_regras_semanticas.sql:323: NOTICE:  [OK] P03 | EXECUTE: concedido a bd2_app e NÃO a PUBLIC
+psql:sql/06_testes/03_testes_regras_semanticas.sql:323: NOTICE:  [OK] P04 | bd2_app: nenhum privilégio de tabela em invoice / invoice_line
+psql:sql/06_testes/03_testes_regras_semanticas.sql:323: NOTICE:  [OK] P05 | bd2_app não é membro de nenhum papel (não herda privilégios)
+psql:sql/06_testes/03_testes_regras_semanticas.sql:323: NOTICE:  [OK] P06 | bd2_owner: sem DELETE/TRUNCATE em invoice / invoice_line (privilégio mínimo)
+psql:sql/06_testes/03_testes_regras_semanticas.sql:323: NOTICE:  [OK] P07 | bd2_app: nenhum privilégio em NENHUMA tabela do Chinook e sem EXECUTE na procedure de remoção de índices
+ caso |                                                 operacao                                                 |     esperado      |      obtido       | resultado 
+------+----------------------------------------------------------------------------------------------------------+-------------------+-------------------+-----------
+ H01  | employee: INSERT raiz (reports_to NULL)                                                                  | ACEITO            | ACEITO            | OK
+ H02  | employee: INSERT e2 subordinado a e1                                                                     | ACEITO            | ACEITO            | OK
+ H03  | employee: INSERT e3 subordinado a e2                                                                     | ACEITO            | ACEITO            | OK
+ H04  | employee: INSERT e4 (outra raiz)                                                                         | ACEITO            | ACEITO            | OK
+ H05  | employee: auto-referência (e2 superior de si mesmo)                                                      | REJEITADO (23514) | REJEITADO (23514) | OK
+ H06  | employee: ciclo de 2 (e1 passa a reportar a e2; e2 já reporta a e1)                                      | REJEITADO (23514) | REJEITADO (23514) | OK
+ H07  | employee: ciclo de 3 (e1 -> e3 -> e2 -> e1)                                                              | REJEITADO (23514) | REJEITADO (23514) | OK
+ H08  | employee: ciclo em UPDATE de várias linhas no mesmo comando (e1 <-> e4)                                  | REJEITADO (23514) | REJEITADO (23514) | OK
+ H09  | employee: ciclo em INSERT de 2 linhas no mesmo comando (a -> b, b -> a)                                  | REJEITADO (23514) | REJEITADO (23514) | OK
+ H10  | employee: mudança válida (e3 passa a reportar direto a e1)                                               | ACEITO            | ACEITO            | OK
+ H11  | employee: mudança válida (e1 passa a reportar a e4; sem ciclo)                                           | ACEITO            | ACEITO            | OK
+ H12  | employee: agora e4 -> e3 fecharia e4 -> e3 -> e1 -> e4                                                   | REJEITADO (23514) | REJEITADO (23514) | OK
+ H13  | employee: UPDATE de outra coluna (phone) não é afetado                                                   | ACEITO            | ACEITO            | OK
+ H14  | employee: tornar e1 raiz novamente (reports_to NULL)                                                     | ACEITO            | ACEITO            | OK
+ H15  | employee: hierarquia do seed — General Manager passa a reportar a um subordinado indireto                | REJEITADO (23514) | REJEITADO (23514) | OK
+ H16  | employee: hierarquia final acíclica (nenhum funcionário alcança a si mesmo)                              | VERDADEIRO        | VERDADEIRO        | OK
+ T01  | invoice: INSERT informando total = 999.99 sem itens                                                      | ACEITO            | ACEITO            | OK
+ T01b | total da fatura sem itens = 0.00 (valor informado foi ignorado)                                          | VERDADEIRO        | VERDADEIRO        | OK
+ T02  | invoice_line: INSERT 1 item (qtd 2)                                                                      | ACEITO            | ACEITO            | OK
+ T02b | total = 0.99 × 2                                                                                         | VERDADEIRO        | VERDADEIRO        | OK
+ T03  | invoice_line: INSERT 2º item (qtd 1)                                                                     | ACEITO            | ACEITO            | OK
+ T03b | total = soma dos 2 itens                                                                                 | VERDADEIRO        | VERDADEIRO        | OK
+ T04  | invoice_line: UPDATE quantity 2 -> 5                                                                     | ACEITO            | ACEITO            | OK
+ T04b | total recalculado após mudar quantidade                                                                  | VERDADEIRO        | VERDADEIRO        | OK
+ T05  | invoice_line: UPDATE unit_price -> 10.00                                                                 | ACEITO            | ACEITO            | OK
+ T05b | total recalculado após mudar preço                                                                       | VERDADEIRO        | VERDADEIRO        | OK
+ T09  | invoice: UPDATE direto total = 0.01 (adulteração)                                                        | ACEITO            | ACEITO            | OK
+ T09b | total voltou ao valor calculado (trigger A)                                                              | VERDADEIRO        | VERDADEIRO        | OK
+ T08a | invoice: INSERT segunda fatura (vazia)                                                                   | ACEITO            | ACEITO            | OK
+ T08  | invoice_line: mover item (preço 10.00) da fatura 1 para a fatura 2                                       | ACEITO            | ACEITO            | OK
+ T08b | fatura de origem diminuiu E fatura de destino aumentou                                                   | VERDADEIRO        | VERDADEIRO        | OK
+ T06  | invoice_line: DELETE do item da fatura 1                                                                 | ACEITO            | ACEITO            | OK
+ T07  | DELETE do último item -> total = 0.00                                                                    | VERDADEIRO        | VERDADEIRO        | OK
+ T10  | invoice_line: INSERT ... SELECT de 50 itens em um comando                                                | ACEITO            | ACEITO            | OK
+ T10b | total = soma dos 50 itens                                                                                | VERDADEIRO        | VERDADEIRO        | OK
+ T12  | invoice_line: INSERT ... ON CONFLICT (invoice_line_id) DO UPDATE SET quantity = 7                        | ACEITO            | ACEITO            | OK
+ T12b | total correto após upsert                                                                                | VERDADEIRO        | VERDADEIRO        | OK
+ T13  | TRUNCATE invoice_line -> todas as faturas com total = 0 (trigger de statement)                           | VERDADEIRO        | VERDADEIRO        | OK
+ T13b | após desfazer o TRUNCATE, os itens do seed continuam lá                                                  | VERDADEIRO        | VERDADEIRO        | OK
+ T14  | auditoria global: 0 faturas com total divergente                                                         | VERDADEIRO        | VERDADEIRO        | OK
+ S01  | bd2_app: CALL com 2 itens válidos                                                                        | ACEITO            | ACEITO            | OK
+ S02  | fatura criada com 2 itens e total = Σ(preço oficial da faixa × qtd)                                      | VERDADEIRO        | VERDADEIRO        | OK
+ S03  | cobrança copiada do cliente e status inicial do DTE (PENDENTE)                                           | VERDADEIRO        | VERDADEIRO        | OK
+ S04  | bd2_app: CALL com lista vazia []                                                                         | REJEITADO (23514) | REJEITADO (23514) | OK
+ S05  | bd2_app: CALL com itens NULL                                                                             | REJEITADO (23514) | REJEITADO (23514) | OK
+ S06  | bd2_app: CALL com objeto em vez de array                                                                 | REJEITADO (23514) | REJEITADO (23514) | OK
+ S07  | bd2_app: CALL com cliente inexistente                                                                    | REJEITADO (23503) | REJEITADO (23503) | OK
+ S08  | bd2_app: CALL com 1 item válido + 1 faixa inexistente                                                    | REJEITADO (23503) | REJEITADO (23503) | OK
+ S09  | bd2_app: CALL com quantidade 0                                                                           | REJEITADO (23514) | REJEITADO (23514) | OK
+ S10  | bd2_app: CALL com quantidade negativa                                                                    | REJEITADO (23514) | REJEITADO (23514) | OK
+ S11  | bd2_app: CALL com quantidade não inteira (1.5)                                                           | REJEITADO (22023) | REJEITADO (22023) | OK
+ S12  | bd2_app: CALL com item sem track_id                                                                      | REJEITADO (22023) | REJEITADO (22023) | OK
+ S13  | bd2_app: CALL com quantidade em texto ("2")                                                              | REJEITADO (22023) | REJEITADO (22023) | OK
+ S14  | casos rejeitados não deixaram fatura gravada (só a do S01 foi criada)                                    | VERDADEIRO        | VERDADEIRO        | OK
+ S15  | bd2_app: INSERT direto em invoice                                                                        | REJEITADO (42501) | REJEITADO (42501) | OK
+ S16  | bd2_app: INSERT direto em invoice_line                                                                   | REJEITADO (42501) | REJEITADO (42501) | OK
+ S17  | bd2_app: UPDATE direto em invoice_line                                                                   | REJEITADO (42501) | REJEITADO (42501) | OK
+ S18  | bd2_app: DELETE direto em invoice_line (deixaria fatura sem itens)                                       | REJEITADO (42501) | REJEITADO (42501) | OK
+ S19  | bd2_app: DELETE direto em invoice                                                                        | REJEITADO (42501) | REJEITADO (42501) | OK
+ S20  | bd2_app: TRUNCATE invoice_line                                                                           | REJEITADO (42501) | REJEITADO (42501) | OK
+ S21  | bd2_app: SELECT direto em invoice (sem acesso aos dados fora da procedure)                               | REJEITADO (42501) | REJEITADO (42501) | OK
+ S22  | bd2_app: CALL de outra procedure (bd2_meta.remover_binding)                                              | REJEITADO (42501) | REJEITADO (42501) | OK
+ P01  | bd2_owner: NOLOGIN e não superusuário; bd2_app: LOGIN e não superusuário                                 | VERDADEIRO        | VERDADEIRO        | OK
+ P02  | procedure: SECURITY DEFINER, dono bd2_owner, search_path fixo                                            | VERDADEIRO        | VERDADEIRO        | OK
+ P03  | EXECUTE: concedido a bd2_app e NÃO a PUBLIC                                                              | VERDADEIRO        | VERDADEIRO        | OK
+ P04  | bd2_app: nenhum privilégio de tabela em invoice / invoice_line                                           | VERDADEIRO        | VERDADEIRO        | OK
+ P05  | bd2_app não é membro de nenhum papel (não herda privilégios)                                             | VERDADEIRO        | VERDADEIRO        | OK
+ P06  | bd2_owner: sem DELETE/TRUNCATE em invoice / invoice_line (privilégio mínimo)                             | VERDADEIRO        | VERDADEIRO        | OK
+ P07  | bd2_app: nenhum privilégio em NENHUMA tabela do Chinook e sem EXECUTE na procedure de remoção de índices | VERDADEIRO        | VERDADEIRO        | OK
+(69 rows)
+
+psql:sql/06_testes/lib/resumo.sql:37: NOTICE:  OK: Testes Parte 2 (R-TRG-01, R-TRG-02, R-SP-01) passaram — 69 casos.
+DO
+------------------------------------------------------------------
+Executando: sql/07_evidencias/01_gerar_evidencias.sql
+psql:sql/07_evidencias/01_gerar_evidencias.sql:85: NOTICE:  Tabela public.invoice_line | Objeto: invoice_line_invoice_id_idx | Ação: DROP INDEX | Resultado: REMOVIDO
+psql:sql/07_evidencias/01_gerar_evidencias.sql:85: NOTICE:  Tabela public.invoice_line | Objeto: invoice_line_track_id_idx | Ação: DROP INDEX | Resultado: REMOVIDO
+psql:sql/07_evidencias/01_gerar_evidencias.sql:85: NOTICE:  Tabela public.invoice_line | Objeto: invoice_line_pkey | Ação: PRESERVAR CONSTRAINT (p) | Resultado: PRESERVADO
+psql:sql/07_evidencias/01_gerar_evidencias.sql:93: NOTICE:  Tabela public.invoice_line | Objeto: invoice_line_pkey | Ação: DROP CONSTRAINT (p) RESTRICT | Resultado: REMOVIDO
+psql:sql/07_evidencias/01_gerar_evidencias.sql:104: NOTICE:  Tabela public.employee | Objeto: employee_reports_to_idx | Ação: DROP INDEX | Resultado: REMOVIDO
+psql:sql/07_evidencias/01_gerar_evidencias.sql:112: NOTICE:  Tabela public.employee | Objeto: employee_reports_to_idx | Ação: DROP INDEX | Resultado: REMOVIDO
+psql:sql/07_evidencias/01_gerar_evidencias.sql:112: NOTICE:  drop cascades to 2 other objects
+DETAIL:  drop cascades to constraint customer_support_rep_id_fkey on table customer
+drop cascades to constraint employee_reports_to_fkey on table employee
+psql:sql/07_evidencias/01_gerar_evidencias.sql:112: NOTICE:  Tabela public.employee | Objeto: employee_pkey | Ação: DROP CONSTRAINT (p) CASCADE | Resultado: REMOVIDO
+psql:sql/07_evidencias/01_gerar_evidencias.sql:144: NOTICE:  schema "bd2_q4_prova" does not exist, skipping
+psql:sql/07_evidencias/01_gerar_evidencias.sql:162: NOTICE:  drop cascades to 11 other objects
+DETAIL:  drop cascades to table bd2_q4_prova.album
+drop cascades to table bd2_q4_prova.artist
+drop cascades to table bd2_q4_prova.customer
+drop cascades to table bd2_q4_prova.employee
+drop cascades to table bd2_q4_prova.genre
+drop cascades to table bd2_q4_prova.invoice
+drop cascades to table bd2_q4_prova.invoice_line
+drop cascades to table bd2_q4_prova.media_type
+drop cascades to table bd2_q4_prova.playlist
+drop cascades to table bd2_q4_prova.playlist_track
+drop cascades to table bd2_q4_prova.track
+------------------------------------------------------------------
+Executando: sql/06_testes/04_concorrencia.sh
+==================================================================
+Testes de concorrência (N = 30 sessões paralelas) e de conexão real
+==================================================================
+[OK] C1 R-TRG-02: 30 inserções paralelas na mesma fatura; total 59.40 = 59.40; 0 erros
+[OK] C2 R-TRG-02: 30 movimentações cruzadas entre 2 faturas; ambos os totais corretos; 0 deadlocks
+[OK] C3 R-TRG-01 (READ COMMITTED): sessão 1 confirmou; sessão 2 rejeitada (R-TRG-01: definir 15 como superior de 16 criaria um ciclo na hierarquia (cadeia: 15 -> 16)); estado final: CONC_A->16, CONC_B->NULL (sem ciclo)
+[OK] C4 R-TRG-01 (REPEATABLE READ): sessão 1 confirmou; sessão 2 rejeitada (could not serialize access due to concurrent update); estado final: CONC_A->16, CONC_B->NULL (sem ciclo)
+[OK] C5 R-SP-01: 30 chamadas paralelas como bd2_app; 30 faturas, todas com 2 itens e total correto
+[OK] L1 R-SP-01: login real como bd2_app com senha (senha errada: password authentication failed for user bd2_app); CALL criou a fatura 452; INSERT direto: permission denied for table invoice; SELECT direto: permission denied for table invoice
+[OK] Auditoria final: 0 faturas com total divergente
+------------------------------------------------------------------
+OK: Testes de concorrência passaram.
+==================================================================
+Execução concluída com sucesso!
+==================================================================

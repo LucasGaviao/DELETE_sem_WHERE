@@ -1,0 +1,73 @@
+ caso |                                                 operacao                                                 |     esperado      |      obtido       | resultado 
+------+----------------------------------------------------------------------------------------------------------+-------------------+-------------------+-----------
+ H01  | employee: INSERT raiz (reports_to NULL)                                                                  | ACEITO            | ACEITO            | OK
+ H02  | employee: INSERT e2 subordinado a e1                                                                     | ACEITO            | ACEITO            | OK
+ H03  | employee: INSERT e3 subordinado a e2                                                                     | ACEITO            | ACEITO            | OK
+ H04  | employee: INSERT e4 (outra raiz)                                                                         | ACEITO            | ACEITO            | OK
+ H05  | employee: auto-referência (e2 superior de si mesmo)                                                      | REJEITADO (23514) | REJEITADO (23514) | OK
+ H06  | employee: ciclo de 2 (e1 passa a reportar a e2; e2 já reporta a e1)                                      | REJEITADO (23514) | REJEITADO (23514) | OK
+ H07  | employee: ciclo de 3 (e1 -> e3 -> e2 -> e1)                                                              | REJEITADO (23514) | REJEITADO (23514) | OK
+ H08  | employee: ciclo em UPDATE de várias linhas no mesmo comando (e1 <-> e4)                                  | REJEITADO (23514) | REJEITADO (23514) | OK
+ H09  | employee: ciclo em INSERT de 2 linhas no mesmo comando (a -> b, b -> a)                                  | REJEITADO (23514) | REJEITADO (23514) | OK
+ H10  | employee: mudança válida (e3 passa a reportar direto a e1)                                               | ACEITO            | ACEITO            | OK
+ H11  | employee: mudança válida (e1 passa a reportar a e4; sem ciclo)                                           | ACEITO            | ACEITO            | OK
+ H12  | employee: agora e4 -> e3 fecharia e4 -> e3 -> e1 -> e4                                                   | REJEITADO (23514) | REJEITADO (23514) | OK
+ H13  | employee: UPDATE de outra coluna (phone) não é afetado                                                   | ACEITO            | ACEITO            | OK
+ H14  | employee: tornar e1 raiz novamente (reports_to NULL)                                                     | ACEITO            | ACEITO            | OK
+ H15  | employee: hierarquia do seed — General Manager passa a reportar a um subordinado indireto                | REJEITADO (23514) | REJEITADO (23514) | OK
+ H16  | employee: hierarquia final acíclica (nenhum funcionário alcança a si mesmo)                              | VERDADEIRO        | VERDADEIRO        | OK
+ T01  | invoice: INSERT informando total = 999.99 sem itens                                                      | ACEITO            | ACEITO            | OK
+ T01b | total da fatura sem itens = 0.00 (valor informado foi ignorado)                                          | VERDADEIRO        | VERDADEIRO        | OK
+ T02  | invoice_line: INSERT 1 item (qtd 2)                                                                      | ACEITO            | ACEITO            | OK
+ T02b | total = 0.99 × 2                                                                                         | VERDADEIRO        | VERDADEIRO        | OK
+ T03  | invoice_line: INSERT 2º item (qtd 1)                                                                     | ACEITO            | ACEITO            | OK
+ T03b | total = soma dos 2 itens                                                                                 | VERDADEIRO        | VERDADEIRO        | OK
+ T04  | invoice_line: UPDATE quantity 2 -> 5                                                                     | ACEITO            | ACEITO            | OK
+ T04b | total recalculado após mudar quantidade                                                                  | VERDADEIRO        | VERDADEIRO        | OK
+ T05  | invoice_line: UPDATE unit_price -> 10.00                                                                 | ACEITO            | ACEITO            | OK
+ T05b | total recalculado após mudar preço                                                                       | VERDADEIRO        | VERDADEIRO        | OK
+ T09  | invoice: UPDATE direto total = 0.01 (adulteração)                                                        | ACEITO            | ACEITO            | OK
+ T09b | total voltou ao valor calculado (trigger A)                                                              | VERDADEIRO        | VERDADEIRO        | OK
+ T08a | invoice: INSERT segunda fatura (vazia)                                                                   | ACEITO            | ACEITO            | OK
+ T08  | invoice_line: mover item (preço 10.00) da fatura 1 para a fatura 2                                       | ACEITO            | ACEITO            | OK
+ T08b | fatura de origem diminuiu E fatura de destino aumentou                                                   | VERDADEIRO        | VERDADEIRO        | OK
+ T06  | invoice_line: DELETE do item da fatura 1                                                                 | ACEITO            | ACEITO            | OK
+ T07  | DELETE do último item -> total = 0.00                                                                    | VERDADEIRO        | VERDADEIRO        | OK
+ T10  | invoice_line: INSERT ... SELECT de 50 itens em um comando                                                | ACEITO            | ACEITO            | OK
+ T10b | total = soma dos 50 itens                                                                                | VERDADEIRO        | VERDADEIRO        | OK
+ T12  | invoice_line: INSERT ... ON CONFLICT (invoice_line_id) DO UPDATE SET quantity = 7                        | ACEITO            | ACEITO            | OK
+ T12b | total correto após upsert                                                                                | VERDADEIRO        | VERDADEIRO        | OK
+ T13  | TRUNCATE invoice_line -> todas as faturas com total = 0 (trigger de statement)                           | VERDADEIRO        | VERDADEIRO        | OK
+ T13b | após desfazer o TRUNCATE, os itens do seed continuam lá                                                  | VERDADEIRO        | VERDADEIRO        | OK
+ T14  | auditoria global: 0 faturas com total divergente                                                         | VERDADEIRO        | VERDADEIRO        | OK
+ S01  | bd2_app: CALL com 2 itens válidos                                                                        | ACEITO            | ACEITO            | OK
+ S02  | fatura criada com 2 itens e total = Σ(preço oficial da faixa × qtd)                                      | VERDADEIRO        | VERDADEIRO        | OK
+ S03  | cobrança copiada do cliente e status inicial do DTE (PENDENTE)                                           | VERDADEIRO        | VERDADEIRO        | OK
+ S04  | bd2_app: CALL com lista vazia []                                                                         | REJEITADO (23514) | REJEITADO (23514) | OK
+ S05  | bd2_app: CALL com itens NULL                                                                             | REJEITADO (23514) | REJEITADO (23514) | OK
+ S06  | bd2_app: CALL com objeto em vez de array                                                                 | REJEITADO (23514) | REJEITADO (23514) | OK
+ S07  | bd2_app: CALL com cliente inexistente                                                                    | REJEITADO (23503) | REJEITADO (23503) | OK
+ S08  | bd2_app: CALL com 1 item válido + 1 faixa inexistente                                                    | REJEITADO (23503) | REJEITADO (23503) | OK
+ S09  | bd2_app: CALL com quantidade 0                                                                           | REJEITADO (23514) | REJEITADO (23514) | OK
+ S10  | bd2_app: CALL com quantidade negativa                                                                    | REJEITADO (23514) | REJEITADO (23514) | OK
+ S11  | bd2_app: CALL com quantidade não inteira (1.5)                                                           | REJEITADO (22023) | REJEITADO (22023) | OK
+ S12  | bd2_app: CALL com item sem track_id                                                                      | REJEITADO (22023) | REJEITADO (22023) | OK
+ S13  | bd2_app: CALL com quantidade em texto ("2")                                                              | REJEITADO (22023) | REJEITADO (22023) | OK
+ S14  | casos rejeitados não deixaram fatura gravada (só a do S01 foi criada)                                    | VERDADEIRO        | VERDADEIRO        | OK
+ S15  | bd2_app: INSERT direto em invoice                                                                        | REJEITADO (42501) | REJEITADO (42501) | OK
+ S16  | bd2_app: INSERT direto em invoice_line                                                                   | REJEITADO (42501) | REJEITADO (42501) | OK
+ S17  | bd2_app: UPDATE direto em invoice_line                                                                   | REJEITADO (42501) | REJEITADO (42501) | OK
+ S18  | bd2_app: DELETE direto em invoice_line (deixaria fatura sem itens)                                       | REJEITADO (42501) | REJEITADO (42501) | OK
+ S19  | bd2_app: DELETE direto em invoice                                                                        | REJEITADO (42501) | REJEITADO (42501) | OK
+ S20  | bd2_app: TRUNCATE invoice_line                                                                           | REJEITADO (42501) | REJEITADO (42501) | OK
+ S21  | bd2_app: SELECT direto em invoice (sem acesso aos dados fora da procedure)                               | REJEITADO (42501) | REJEITADO (42501) | OK
+ S22  | bd2_app: CALL de outra procedure (bd2_meta.remover_binding)                                              | REJEITADO (42501) | REJEITADO (42501) | OK
+ P01  | bd2_owner: NOLOGIN e não superusuário; bd2_app: LOGIN e não superusuário                                 | VERDADEIRO        | VERDADEIRO        | OK
+ P02  | procedure: SECURITY DEFINER, dono bd2_owner, search_path fixo                                            | VERDADEIRO        | VERDADEIRO        | OK
+ P03  | EXECUTE: concedido a bd2_app e NÃO a PUBLIC                                                              | VERDADEIRO        | VERDADEIRO        | OK
+ P04  | bd2_app: nenhum privilégio de tabela em invoice / invoice_line                                           | VERDADEIRO        | VERDADEIRO        | OK
+ P05  | bd2_app não é membro de nenhum papel (não herda privilégios)                                             | VERDADEIRO        | VERDADEIRO        | OK
+ P06  | bd2_owner: sem DELETE/TRUNCATE em invoice / invoice_line (privilégio mínimo)                             | VERDADEIRO        | VERDADEIRO        | OK
+ P07  | bd2_app: nenhum privilégio em NENHUMA tabela do Chinook e sem EXECUTE na procedure de remoção de índices | VERDADEIRO        | VERDADEIRO        | OK
+(69 rows)
+
