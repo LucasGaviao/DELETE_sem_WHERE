@@ -1,6 +1,6 @@
 -- =============================================================================
--- Testes Automatizados — Blocos 1 e 2 (Parte 1: Q1, Q2, Q3, Q4)
--- Arquivo: sql/06_testes/01_testes_blocos_1_e_2.sql
+-- Testes Automatizados — Parte 1, Questões 1 a 4
+-- Arquivo: sql/06_testes/01_testes_parte1_q1_a_q4.sql
 -- =============================================================================
 
 -- -----------------------------------------------------------------------------
@@ -132,6 +132,28 @@ BEGIN
     ASSERT v_falhou, 'Q2: remoção da PK de employee sem CASCADE deveria falhar por dependência de FK';
 
     RAISE NOTICE 'OK: Testes Q2 passaram.';
+END $$;
+
+-- Q2 com p_cascade: remover TODOS os índices de uma tabela cuja PK é referenciada
+DO $$
+DECLARE
+    v_resumo jsonb;
+    v_idx    int;
+    v_fk     int;
+BEGIN
+    CREATE TABLE bd2_demo.q2_pai   (id int PRIMARY KEY, nome text);
+    CREATE INDEX q2_pai_nome_idx ON bd2_demo.q2_pai (nome);
+    CREATE TABLE bd2_demo.q2_filho (id int PRIMARY KEY, pai_id int REFERENCES bd2_demo.q2_pai (id));
+
+    CALL bd2_meta.remover_indices_tabela('bd2_demo', 'q2_pai', p_incluir_constraints => true, p_cascade => true, p_resumo => v_resumo);
+
+    SELECT count(*) INTO v_idx FROM bd2_meta.listar_indices('bd2_demo') WHERE table_name = 'q2_pai';
+    SELECT count(*) INTO v_fk  FROM bd2_meta.listar_foreign_keys('bd2_demo') WHERE local_table = 'q2_filho';
+    ASSERT v_idx = 0, format('Q2 (CASCADE): esperados 0 índices em q2_pai, encontrados %s', v_idx);
+    ASSERT v_fk  = 0, format('Q2 (CASCADE): a FK de q2_filho deveria ter sido removida junto, encontradas %s', v_fk);
+
+    DROP TABLE bd2_demo.q2_filho, bd2_demo.q2_pai;
+    RAISE NOTICE 'OK: Testes Q2 (CASCADE) passaram.';
 END $$;
 
 -- -----------------------------------------------------------------------------

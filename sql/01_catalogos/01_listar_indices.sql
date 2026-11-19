@@ -60,7 +60,9 @@ AS $$
     JOIN pg_class tbl ON tbl.oid = i.indrelid
     JOIN pg_namespace ns ON ns.oid = tbl.relnamespace
     JOIN pg_am am ON am.oid = idx.relam
-    WHERE tbl.relkind IN ('r', 'p')
+    -- r: tabela, p: tabela particionada, m: visão materializada, t: tabela TOAST
+    -- (as TOAST ficam no schema pg_toast, listado só com p_incluir_sistema)
+    WHERE tbl.relkind IN ('r', 'p', 'm', 't')
       AND (
           p_incluir_sistema
           OR (

@@ -61,4 +61,6 @@ A execução automatizada (`run_all.sh` / `run_all.ps1`) segue estritamente a or
 8. `sql/05_regras_semanticas/01_trigger_hierarquia_employee.sql` — Trigger `R-TRG-01` (P2-Q2).
 9. `sql/05_regras_semanticas/02_integridade_invoice_total.sql` — Triggers `R-TRG-02` (P2-Q4, **pré-requisito para R-SP-01**).
 10. `sql/05_regras_semanticas/03_procedure_criar_fatura.sql` — Procedure `R-SP-01` e grants de execução (P2-Q3).
-11. `sql/06_testes/*.sql` e `06_concorrencia.sh` — Bateria de testes automatizados positivos, negativos e de concorrência.
+11. `sql/06_testes/*.sql` — Bateria de testes automatizados positivos e negativos (tabelas de resultado gravadas em `evidencias/`).
+12. `sql/07_evidencias/01_gerar_evidencias.sql` — Saídas reais de cada questão para o relatório.
+13. `sql/06_testes/04_concorrencia.sh` — Testes de concorrência com sessões `psql` paralelas.

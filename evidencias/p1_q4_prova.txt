@@ -1,0 +1,7 @@
+== Execução do DDL gerado em um schema novo (bd2_q4_prova): ACEITO
+    schema    | tabelas | pks | fks | colunas | colunas_not_null 
+--------------+---------+-----+-----+---------+------------------
+ bd2_q4_prova |      11 |  11 |  11 |      65 |               31
+ public       |      11 |  11 |  11 |      65 |               31
+(2 rows)
+

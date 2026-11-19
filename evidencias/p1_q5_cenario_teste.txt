@@ -1,0 +1,59 @@
+ caso |                                         operacao                                          |     esperado      |      obtido       | resultado 
+------+-------------------------------------------------------------------------------------------+-------------------+-------------------+-----------
+ A01  | invoice: INSERT sem informar status (DEFAULT PENDENTE = inicial)                          | ACEITO            | ACEITO            | OK
+ A02  | invoice: INSERT com status PAGO (não inicial, política INITIAL_ONLY)                      | REJEITADO (23514) | REJEITADO (23514) | OK
+ A03  | invoice: INSERT com status inexistente ESTORNADO                                          | REJEITADO (23514) | REJEITADO (23514) | OK
+ A04  | invoice: PENDENTE -> PAGO                                                                 | ACEITO            | ACEITO            | OK
+ A05  | invoice: PAGO -> PENDENTE (PAGO é terminal)                                               | REJEITADO (23514) | REJEITADO (23514) | OK
+ A06  | invoice: UPDATE de outra coluna (billing_city) numa fatura PAGO                           | ACEITO            | ACEITO            | OK
+ A07  | invoice: UPDATE status PAGO -> PAGO (sem mudança de estado)                               | ACEITO            | ACEITO            | OK
+ A08  | invoice: INSERT de segunda fatura (PENDENTE)                                              | ACEITO            | ACEITO            | OK
+ A09  | invoice: PENDENTE -> CANCELADO                                                            | ACEITO            | ACEITO            | OK
+ A10  | invoice: CANCELADO -> PAGO (CANCELADO é terminal)                                         | REJEITADO (23514) | REJEITADO (23514) | OK
+ A11  | invoice: status em minúsculas ('pago') — códigos são exatos                               | REJEITADO (23514) | REJEITADO (23514) | OK
+ B01  | pedido: INSERT sem informar situacao (DEFAULT NOVO)                                       | ACEITO            | ACEITO            | OK
+ B02  | pedido: INSERT direto em CONCLUIDO (política ANY_VALID_STATE permite)                     | ACEITO            | ACEITO            | OK
+ B03  | pedido: INSERT com situacao NULL (coluna anulável; rejeitado pelo motor)                  | REJEITADO (23514) | REJEITADO (23514) | OK
+ B04  | pedido: INSERT com PAGO (estado de OUTRA máquina)                                         | REJEITADO (23514) | REJEITADO (23514) | OK
+ B05  | pedido: NOVO -> CONCLUIDO (pula EM_ANDAMENTO; sem aresta)                                 | REJEITADO (23514) | REJEITADO (23514) | OK
+ B06  | pedido: NOVO -> EM_ANDAMENTO                                                              | ACEITO            | ACEITO            | OK
+ B07  | pedido: EM_ANDAMENTO -> NULL                                                              | REJEITADO (23514) | REJEITADO (23514) | OK
+ B08  | pedido: EM_ANDAMENTO -> CONCLUIDO                                                         | ACEITO            | ACEITO            | OK
+ B09  | pedido: INSERT de terceiro pedido (NOVO)                                                  | ACEITO            | ACEITO            | OK
+ B10  | pedido: UPDATE em lote -> EM_ANDAMENTO (uma linha NOVO válida + uma CONCLUIDO inválida)   | REJEITADO (23514) | REJEITADO (23514) | OK
+ B11  | pedido: após B10, a linha válida continua NOVO (atomicidade do comando)                   | VERDADEIRO        | VERDADEIRO        | OK
+ C01  | pedido: NOVO -> EM_ANDAMENTO com o estado EM_ANDAMENTO desativado                         | REJEITADO (23514) | REJEITADO (23514) | OK
+ C02  | pedido: INSERT com binding INATIVO (trigger ainda instalado) — falha segura               | REJEITADO (55000) | REJEITADO (55000) | OK
+ C03  | pedido: INSERT com a MÁQUINA inativa — falha segura                                       | REJEITADO (55000) | REJEITADO (55000) | OK
+ C04  | pedido: INSERT após reativar binding e máquina                                            | ACEITO            | ACEITO            | OK
+ D01  | registrar_binding de novo na MESMA coluna (idempotência: não duplica binding nem trigger) | ACEITO            | ACEITO            | OK
+ D02  | após D01: exatamente 1 binding e 1 trigger zz_fsm_ em pedido_demo                         | VERDADEIRO        | VERDADEIRO        | OK
+ D03  | registrar_binding em tabela inexistente                                                   | REJEITADO (42P01) | REJEITADO (42P01) | OK
+ D04  | registrar_binding em coluna inexistente                                                   | REJEITADO (42703) | REJEITADO (42703) | OK
+ D05  | registrar_binding em coluna de tipo não suportado (timestamp)                             | REJEITADO (22023) | REJEITADO (22023) | OK
+ D06  | registrar_binding com máquina inexistente                                                 | REJEITADO (22023) | REJEITADO (22023) | OK
+ D07  | remover_binding de pedido_demo.situacao                                                   | ACEITO            | ACEITO            | OK
+ D08  | após D07: trigger removido e binding desativado (sem trigger órfão)                       | VERDADEIRO        | VERDADEIRO        | OK
+ D09  | pedido: sem binding, valor fora do DTE (QUALQUER) não é validado                          | ACEITO            | ACEITO            | OK
+ D10  | registrar_binding com dados existentes inválidos (linha QUALQUER)                         | REJEITADO (23514) | REJEITADO (23514) | OK
+ D11  | registrar_binding após corrigir os dados                                                  | ACEITO            | ACEITO            | OK
+ D12  | pedido: após re-registro, NOVO -> CONCLUIDO volta a ser rejeitado                         | REJEITADO (23514) | REJEITADO (23514) | OK
+ D13  | registrar_binding em tabela com dados válidos e uma coluna chamada t                      | ACEITO            | ACEITO            | OK
+ D14  | renomear: INSERT depois de renomear a COLUNA vinculada (falha segura)                     | REJEITADO (55000) | REJEITADO (55000) | OK
+ D15  | renomear: remover_binding com o nome ANTIGO da coluna                                     | ACEITO            | ACEITO            | OK
+ D16  | renomear: após D15, nenhum trigger do motor sobra na tabela                               | VERDADEIRO        | VERDADEIRO        | OK
+ D17  | renomear: registrar_binding com o nome NOVO da coluna                                     | ACEITO            | ACEITO            | OK
+ D18  | renomear: INSERT depois de renomear a TABELA vinculada (falha segura)                     | REJEITADO (55000) | REJEITADO (55000) | OK
+ D19  | renomear: remover_binding com o nome ANTIGO da tabela                                     | ACEITO            | ACEITO            | OK
+ D20  | renomear: registrar_binding com o nome NOVO da tabela                                     | ACEITO            | ACEITO            | OK
+ D21  | renomear: exatamente 1 trigger do motor na tabela (sem trigger duplicado)                 | VERDADEIRO        | VERDADEIRO        | OK
+ D22  | renomear: após refazer o vínculo, INSERT em NOVO é aceito                                 | ACEITO            | ACEITO            | OK
+ D23  | renomear: e a transição NOVO -> CONCLUIDO continua rejeitada                              | REJEITADO (23514) | REJEITADO (23514) | OK
+ E01  | config: transição saindo de estado terminal (CONCLUIDO -> NOVO)                           | REJEITADO (23514) | REJEITADO (23514) | OK
+ E02  | config: marcar como terminal um estado com saídas (EM_ANDAMENTO)                          | REJEITADO (23514) | REJEITADO (23514) | OK
+ E03  | config: segundo estado inicial na mesma máquina                                           | REJEITADO (23505) | REJEITADO (23505) | OK
+ E04  | config: transição para estado não cadastrado                                              | REJEITADO (23503) | REJEITADO (23503) | OK
+ F01  | os triggers das 2 tabelas usam a MESMA função (mesmo OID)                                 | VERDADEIRO        | VERDADEIRO        | OK
+ F02  | o código da função não contém nomes de tabela, coluna ou estado da demo                   | VERDADEIRO        | VERDADEIRO        | OK
+(55 rows)
+

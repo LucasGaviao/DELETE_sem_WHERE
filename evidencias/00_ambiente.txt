@@ -1,0 +1,17 @@
+                                    versao_postgresql                                     
+------------------------------------------------------------------------------------------
+ PostgreSQL 16.16 on x86_64-pc-linux-musl, compiled by gcc (Alpine 15.2.0) 15.2.0, 64-bit
+(1 row)
+
+     banco      | tabelas_em_public 
+----------------+-------------------
+ chinook_serial |                11
+(1 row)
+
+  schema  |       dono        
+----------+-------------------
+ bd2_demo | postgres
+ bd2_meta | postgres
+ public   | pg_database_owner
+(3 rows)
+

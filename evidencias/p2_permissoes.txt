@@ -1,0 +1,42 @@
+== Papéis
+   papel   | login | superusuario | herda 
+-----------+-------+--------------+-------
+ bd2_app   | t     | f            | f
+ bd2_owner | f     | f            | f
+(2 rows)
+
+== Privilégios de tabela concedidos aos papéis do trabalho
+   papel   |    tabela    |  privilegios   
+-----------+--------------+----------------
+ bd2_owner | customer     | SELECT
+ bd2_owner | invoice      | INSERT, SELECT
+ bd2_owner | invoice_line | INSERT, SELECT
+ bd2_owner | track        | SELECT
+(4 rows)
+
+== Privilégios de coluna
+   papel   | tabela  | coluna | privilegio 
+-----------+---------+--------+------------
+ bd2_owner | invoice | total  | UPDATE
+(1 row)
+
+== Procedure R-SP-01
+                   procedure                   |   dono    |    seguranca     |              configuracao               |                     acl                     
+-----------------------------------------------+-----------+------------------+-----------------------------------------+---------------------------------------------
+ criar_fatura_com_itens(integer,jsonb,integer) | bd2_owner | SECURITY DEFINER | search_path=pg_catalog, public, pg_temp | {bd2_owner=X/bd2_owner,bd2_app=X/bd2_owner}
+(1 row)
+
+== bd2_app tentando manipular os dados por fora da procedure
+            tentativa            |                          resultado                          
+---------------------------------+-------------------------------------------------------------
+ INSERT INTO public.invoice      | REJEITADO [42501]: permission denied for table invoice
+ DELETE FROM public.invoice_line | REJEITADO [42501]: permission denied for table invoice_line
+ SELECT FROM public.invoice      | REJEITADO [42501]: permission denied for table invoice
+(3 rows)
+
+== Auditoria R-TRG-02 após os testes SQL: faturas com total divergente (a auditoria após os testes de concorrência está em p2_concorrencia.txt)
+ faturas | divergentes 
+---------+-------------
+     412 |           0
+(1 row)
+
